@@ -1,0 +1,11 @@
+spring:
+  data:
+    elasticsearch:
+      cluster-name: docker-cluster
+      repositories:
+        enabled: true
+      cluster-nodes: localhost:9300
+  servlet:
+    multipart:
+      max-request-size: 100MB
+      max-file-size: 100MB
