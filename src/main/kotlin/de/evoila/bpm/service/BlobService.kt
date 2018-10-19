@@ -44,9 +44,10 @@ class BlobService(
     )
   }
 
-  fun findBlobFile(uuid: String): FileInputStream {
+  fun findBlobOrThrow(uuid: String) = blobRepository.findById(uuid).orElseThrow { IllegalArgumentException("Blob with uuid:$uuid not found") }!!
 
-    val blob = blobRepository.findById(uuid).orElseThrow { IllegalArgumentException("Blob with uuid:$uuid not found") }
+  fun findBlobFile(blob: Blob): FileInputStream {
+
     val file = File(blob.location)
 
     return FileInputStream(file)
