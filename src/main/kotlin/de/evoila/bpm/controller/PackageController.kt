@@ -1,83 +1,61 @@
 package de.evoila.bpm.controller
 
-import de.evoila.bpm.rest.bodies.BlobBody
+import de.evoila.bpm.config.S3Config
+import de.evoila.bpm.exceptions.PackageNotFoundException
 import de.evoila.bpm.rest.bodies.PackageBody
-import de.evoila.bpm.service.BlobService
+import de.evoila.bpm.rest.bodies.UploadPermission
 import de.evoila.bpm.service.PackageService
 import org.slf4j.LoggerFactory
-import org.springframework.data.repository.query.Param
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
-import org.springframework.web.multipart.MultipartFile
-import java.io.IOException
-import javax.servlet.http.HttpServletResponse
 
 @RestController
 class PackageController(
     val packageService: PackageService,
-    val blobService: BlobService
+    val s3Config: S3Config
 ) {
 
   @PutMapping(value = ["upload/package"])
   fun uploadPackage(@RequestBody packageBody: PackageBody): ResponseEntity<Any> {
 
-    val saved = packageService.saveRelease(packageBody)
+    val saved = packageService.save(packageBody)
 
-    return ResponseEntity.accepted().body(saved)
-  }
-
-  @GetMapping(value = ["package/{uuid}"])
-  fun getAllPackagesForId(@PathVariable(value = "uuid") uuid: String): ResponseEntity<Any> {
-
-    val packages = packageService.getPackageWithDependenciesAsList(uuid)
-
-    return ResponseEntity.ok().body(packages)
-  }
-
-  @PutMapping(value = ["upload/blob"])
-  fun uploadBlob(@RequestParam(value = "name") name: String,
-                 @RequestParam(value = "version") version: String,
-                 @RequestParam(value = "type") type: String,
-                 @RequestParam(value = "blob") blob: MultipartFile): ResponseEntity<Any> {
-
-    val blobBody = BlobBody(
-        name = name,
-        version = version
+    val uploadPermission = UploadPermission(
+        bucket = s3Config.bucket,
+        region = s3Config.region,
+        authKey = s3Config.authKey,
+        authSecret = s3Config.authSecret,
+        s3location = saved.s3location
     )
 
-    return ResponseEntity.accepted().body(blobService.storeBlob(blobBody, type, blob))
+    log.info("Saved package ${saved.name}:${saved.version} by ${saved.vendor}")
+
+    return ResponseEntity.accepted().body(uploadPermission)
   }
 
-  @GetMapping(value = ["blob/{uuid}"])
-  fun downloadBlob(response: HttpServletResponse,
-                   @PathVariable(value = "uuid") uuid: String,
-                   @Param(value = "filename") filename: String) {
+  @GetMapping(value = ["{vendor}/{name}/{version}"])
+  fun getAllPackagesForId(@PathVariable(value = "vendor") vendor: String,
+                          @PathVariable(value = "name") name: String,
+                          @PathVariable(value = "version") version: String): ResponseEntity<Any> {
 
-    try {
-      val inputStream = blobService.findBlobFile(uuid)
+    return try {
+      val packageBody = packageService.getPackage(vendor, name, version)
 
-      response.setHeader("Content-Disposition", "attachment; filename=$filename")
+      ResponseEntity.ok(packageBody)
+    } catch (e: PackageNotFoundException) {
 
-      val outputStream = response.outputStream
-      val buffer = ByteArray(BUFFER_SIZE)
-      var bytesRead = inputStream.read(buffer)
-
-      while (bytesRead != -1) {
-
-        outputStream.write(buffer, 0, bytesRead)
-        bytesRead = inputStream.read(buffer)
-      }
-
-      inputStream.close()
-      outputStream.close()
-
-    } catch (e: IOException) {
-      log.error(e.message)
+      ResponseEntity.notFound().build()
     }
+  }
+
+  @DeleteMapping(value = ["package/{uuid}"])
+  fun deletePackageById() {
+
+    //   packageService.deletePackage()
+
   }
 
   companion object {
     private val log = LoggerFactory.getLogger(PackageController::class.java)
-    private const val BUFFER_SIZE = 4096
   }
 }

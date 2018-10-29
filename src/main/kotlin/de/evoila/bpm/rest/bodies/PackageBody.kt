@@ -1,16 +1,14 @@
 package de.evoila.bpm.rest.bodies
 
-data class PackageBody(
-    val name: String,
-    val version: String,
-    val blobs: List<BlobBody>,
-    val dependencies: List<Dependency>,
-    val spec: String?,
-    val packaging: String?
-) {
+import com.fasterxml.jackson.annotation.JsonProperty
 
-  data class Dependency(
-      val name: String,
-      val version: String
-  )
-}
+data class PackageBody(
+    @JsonProperty("name")
+    val name: String,
+    @JsonProperty("version")
+    val version: String,
+    @JsonProperty("vendor")
+    val vendor: String,
+    @JsonProperty("files")
+    val files: List<String>
+)

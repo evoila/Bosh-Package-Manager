@@ -7,5 +7,9 @@ import java.util.*
 
 interface PackageRepository : ElasticsearchRepository<Package, String> {
 
-  fun findByNameAndVersion(name: String, version: String): Optional<Package>
+  fun findByName(name: String): List<Package>
+
+  fun findByVendor(name: String): List<Package>
+
+  fun findByVendorAndNameAndVersion(vendor : String, name: String, version: String): Optional<Package>
 }

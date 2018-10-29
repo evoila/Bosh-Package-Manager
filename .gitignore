@@ -6,3 +6,5 @@
 blobs/
 
 out/
+
+src/main/resources/application\.yml
