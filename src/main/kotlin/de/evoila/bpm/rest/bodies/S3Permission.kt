@@ -2,7 +2,7 @@ package de.evoila.bpm.rest.bodies
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
-data class UploadPermission(
+data class S3Permission(
     @JsonProperty(value = "bucket")
     val bucket: String,
     @JsonProperty(value = "region")

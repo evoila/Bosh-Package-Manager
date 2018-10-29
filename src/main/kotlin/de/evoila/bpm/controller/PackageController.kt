@@ -3,7 +3,7 @@ package de.evoila.bpm.controller
 import de.evoila.bpm.config.S3Config
 import de.evoila.bpm.exceptions.PackageNotFoundException
 import de.evoila.bpm.rest.bodies.PackageBody
-import de.evoila.bpm.rest.bodies.UploadPermission
+import de.evoila.bpm.rest.bodies.S3Permission
 import de.evoila.bpm.service.PackageService
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
@@ -20,7 +20,7 @@ class PackageController(
 
     val saved = packageService.save(packageBody)
 
-    val uploadPermission = UploadPermission(
+    val uploadPermission = S3Permission(
         bucket = s3Config.bucket,
         region = s3Config.region,
         authKey = s3Config.authKey,
@@ -41,7 +41,15 @@ class PackageController(
     return try {
       val packageBody = packageService.getPackage(vendor, name, version)
 
-      ResponseEntity.ok(packageBody)
+      val downloadPermission = S3Permission(
+          bucket = s3Config.bucket,
+          region = s3Config.region,
+          authKey = s3Config.authKey,
+          authSecret = s3Config.authSecret,
+          s3location = packageBody.s3location
+      )
+
+      ResponseEntity.ok(downloadPermission)
     } catch (e: PackageNotFoundException) {
 
       ResponseEntity.notFound().build()
