@@ -14,12 +14,20 @@ class PackageService(
     val packageRepository: PackageRepository
 ) {
 
+  fun getPackages(name: String): List<Package> {
+
+    return packageRepository.findByName(name)
+  }
+
   @Throws(PackageNotFoundException::class)
   fun getPackage(vendor: String, name: String, version: String): Package {
 
-    val pack = packageRepository.findByVendorAndNameAndVersion(vendor, name, version)
+    val packages = packageRepository.findByVendorAndNameAndVersion(vendor, name, version)
 
-    return pack.orElseThrow { PackageNotFoundException("didn't not find a package with vendor : $vendor , name : $name:$version") }
+    return packages.find {
+      it.name == name && it.vendor == vendor && it.version == version
+
+    } ?: throw PackageNotFoundException("didn't not find a package with vendor : $vendor , name : $name:$version")
   }
 
   @Throws(PackageStoringException::class)
