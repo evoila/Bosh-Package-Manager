@@ -33,6 +33,16 @@ class PackageController(
     return ResponseEntity.accepted().body(uploadPermission)
   }
 
+
+  @GetMapping("package")
+  fun getPackagesByName(@RequestParam(value = "name") name: String): ResponseEntity<Any> {
+
+    val packages = packageService.getPackages(name)
+
+      return ResponseEntity.ok(packages)
+  }
+
+
   @GetMapping(value = ["{vendor}/{name}/{version}"])
   fun getAllPackagesForId(@PathVariable(value = "vendor") vendor: String,
                           @PathVariable(value = "name") name: String,
