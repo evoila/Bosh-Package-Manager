@@ -6,6 +6,7 @@ import de.evoila.bpm.rest.bodies.PackageBody
 import de.evoila.bpm.rest.bodies.S3Permission
 import de.evoila.bpm.service.PackageService
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -16,7 +17,15 @@ class PackageController(
 ) {
 
   @PutMapping(value = ["upload/package"])
-  fun uploadPackage(@RequestBody packageBody: PackageBody): ResponseEntity<Any> {
+  fun uploadPackage(@RequestParam(value = "force") force: Boolean, @RequestBody packageBody: PackageBody): ResponseEntity<Any> {
+
+    if (!force) {
+      val packages = packageService.checkIfPresent(packageBody)
+
+      if (packages.isNotEmpty()) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(packages)
+      }
+    }
 
     val saved = packageService.save(packageBody)
 
@@ -39,7 +48,7 @@ class PackageController(
 
     val packages = packageService.getPackages(name)
 
-      return ResponseEntity.ok(packages)
+    return ResponseEntity.ok(packages)
   }
 
 
@@ -68,8 +77,6 @@ class PackageController(
 
   @DeleteMapping(value = ["package/{uuid}"])
   fun deletePackageById() {
-
-    //   packageService.deletePackage()
 
   }
 

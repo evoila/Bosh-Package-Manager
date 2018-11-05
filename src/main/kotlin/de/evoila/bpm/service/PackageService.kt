@@ -30,6 +30,11 @@ class PackageService(
     } ?: throw PackageNotFoundException("didn't not find a package with vendor : $vendor , name : $name:$version")
   }
 
+  fun checkIfPresent(packageBody: PackageBody): List<Package> {
+
+    return packageRepository.findByName(packageBody.name).filter { packageBody.name == it.name }
+  }
+
   @Throws(PackageStoringException::class)
   fun save(packageBody: PackageBody
   ): Package {
