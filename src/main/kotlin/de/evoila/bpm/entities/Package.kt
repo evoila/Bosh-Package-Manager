@@ -14,5 +14,7 @@ data class Package(
     @JsonProperty(value = "s3location")
     val s3location: String,
     @JsonProperty(value = "files")
-    val files: List<String>
+    val files: List<String>,
+    @JsonProperty("dependencies")
+    val dependencies: List<Dependency>?
 ) : BaseEntity()
