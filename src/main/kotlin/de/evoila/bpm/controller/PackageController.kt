@@ -4,6 +4,7 @@ import de.evoila.bpm.config.S3Config
 import de.evoila.bpm.exceptions.PackageNotFoundException
 import de.evoila.bpm.rest.bodies.PackageBody
 import de.evoila.bpm.rest.bodies.S3Permission
+import de.evoila.bpm.service.AmazonS3Service
 import de.evoila.bpm.service.PackageService
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -13,35 +14,36 @@ import org.springframework.web.bind.annotation.*
 @RestController
 class PackageController(
     val packageService: PackageService,
-    val s3Config: S3Config
+    val s3Config: S3Config,
+    val amazonS3Service: AmazonS3Service
 ) {
 
   @PutMapping(value = ["upload/package"])
   fun uploadPackage(@RequestParam(value = "force") force: Boolean, @RequestBody packageBody: PackageBody): ResponseEntity<Any> {
 
     if (!force) {
-      val packages = packageService.checkIfPresent(packageBody)
-
-      if (packages.isNotEmpty()) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(packages)
+      packageService.checkIfPresent(packageBody)?.let {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(it)
       }
     }
 
     val saved = packageService.save(packageBody)
 
+    val creds = amazonS3Service.generateTemporaryToken()
+
     val uploadPermission = S3Permission(
         bucket = s3Config.bucket,
         region = s3Config.region,
-        authKey = s3Config.authKey,
-        authSecret = s3Config.authSecret,
-        s3location = saved.s3location
+        authKey = creds.accessKeyId,
+        authSecret = creds.secretAccessKey,
+        s3location = saved.s3location,
+        sessionToken = creds.sessionToken
     )
 
     log.info("Saved package ${saved.name}:${saved.version} by ${saved.vendor}")
 
     return ResponseEntity.accepted().body(uploadPermission)
   }
-
 
   @GetMapping("package")
   fun getPackagesByName(@RequestParam(value = "name") name: String): ResponseEntity<Any> {
@@ -51,21 +53,39 @@ class PackageController(
     return ResponseEntity.ok(packages)
   }
 
-
-  @GetMapping(value = ["{vendor}/{name}/{version}"])
-  fun getAllPackagesForId(@PathVariable(value = "vendor") vendor: String,
-                          @PathVariable(value = "name") name: String,
-                          @PathVariable(value = "version") version: String): ResponseEntity<Any> {
+  @GetMapping(value = ["package/{vendor}/{name}/{version}"])
+  fun getPackageByVendorNameVersion(@PathVariable(value = "vendor") vendor: String,
+                                    @PathVariable(value = "name") name: String,
+                                    @PathVariable(value = "version") version: String): ResponseEntity<Any> {
 
     return try {
       val packageBody = packageService.getPackage(vendor, name, version)
 
+      ResponseEntity.ok(packageBody)
+    } catch (e: PackageNotFoundException) {
+      ResponseEntity.notFound().build()
+    }
+
+  }
+
+
+  @GetMapping(value = ["download/{vendor}/{name}/{version}"])
+  fun downloadPermissionByPackageByVendorNameVersion(@PathVariable(value = "vendor") vendor: String,
+                                                     @PathVariable(value = "name") name: String,
+                                                     @PathVariable(value = "version") version: String): ResponseEntity<Any> {
+
+    return try {
+      val packageBody = packageService.getPackage(vendor, name, version)
+
+      val creds = amazonS3Service.generateTemporaryToken()
+
       val downloadPermission = S3Permission(
           bucket = s3Config.bucket,
           region = s3Config.region,
-          authKey = s3Config.authKey,
-          authSecret = s3Config.authSecret,
-          s3location = packageBody.s3location
+          authKey = creds.accessKeyId,
+          authSecret = creds.secretAccessKey,
+          s3location = packageBody.s3location,
+          sessionToken = creds.sessionToken
       )
 
       ResponseEntity.ok(downloadPermission)

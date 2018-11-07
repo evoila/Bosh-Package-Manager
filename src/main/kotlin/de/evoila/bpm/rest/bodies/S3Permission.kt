@@ -12,5 +12,7 @@ data class S3Permission(
     @JsonProperty(value = "auth-secret")
     val authSecret: String,
     @JsonProperty(value = "s3location")
-    val s3location: String
+    val s3location: String,
+    @JsonProperty(value = "session-token")
+    val sessionToken: String
 )

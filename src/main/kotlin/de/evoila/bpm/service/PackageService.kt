@@ -30,23 +30,36 @@ class PackageService(
     } ?: throw PackageNotFoundException("didn't not find a package with vendor : $vendor , name : $name:$version")
   }
 
-  fun checkIfPresent(packageBody: PackageBody): List<Package> {
+  fun checkIfPresent(packageBody: PackageBody): Package? {
 
-    return packageRepository.findByName(packageBody.name).filter { packageBody.name == it.name }
+    return packageRepository.findByName(packageBody.name).find {
+      it.name == packageBody.name && it.vendor == packageBody.vendor && it.version == packageBody.version
+    }
   }
 
   @Throws(PackageStoringException::class)
-  fun save(packageBody: PackageBody
+  fun save( packageBody: PackageBody
   ): Package {
 
     log.info("Saving package: $packageBody")
+
+    packageRepository.findByVendorAndNameAndVersion(
+        vendor = packageBody.vendor,
+        name = packageBody.name,
+        version = packageBody.version).find {
+      it.name == packageBody.name && it.vendor == packageBody.vendor && it.version == packageBody.version
+    }?.let {
+      packageRepository.deleteById(it.id)
+      //TODO delete file in the S3 bucket!!!
+    }
 
     return packageRepository.save(Package(
         name = packageBody.name,
         vendor = packageBody.vendor,
         version = packageBody.version,
         s3location = "${UUID.randomUUID()}.bpm",
-        files = packageBody.files
+        files = packageBody.files,
+        dependencies = packageBody.dependencies
     ))
   }
 
