@@ -29,15 +29,15 @@ class PackageController(
     }
 
     val saved = packageService.save(packageBody)
-    val creds = amazonS3Service.getS3Credentials(UPLOAD)
+    val uploadCredentials = amazonS3Service.getS3Credentials(UPLOAD)
 
     val uploadPermission = S3Permission(
         bucket = s3Config.bucket,
         region = s3Config.region,
-        authKey = creds.accessKeyId,
-        authSecret = creds.secretAccessKey,
+        authKey = uploadCredentials.accessKeyId,
+        authSecret = uploadCredentials.secretAccessKey,
         s3location = saved.s3location,
-        sessionToken = creds.sessionToken
+        sessionToken = uploadCredentials.sessionToken
     )
 
     log.info("Saved package ${saved.name}:${saved.version} by ${saved.vendor}")
@@ -75,15 +75,15 @@ class PackageController(
     return try {
       val packageBody = packageService.getPackage(vendor, name, version)
 
-      val creds = amazonS3Service.getS3Credentials(DOWNLOAD)
+      val downloadCredentials = amazonS3Service.getS3Credentials(DOWNLOAD)
 
       val downloadPermission = S3Permission(
           bucket = s3Config.bucket,
           region = s3Config.region,
-          authKey = creds.accessKeyId,
-          authSecret = creds.secretAccessKey,
+          authKey = downloadCredentials.accessKeyId,
+          authSecret = downloadCredentials.secretAccessKey,
           s3location = packageBody.s3location,
-          sessionToken = creds.sessionToken
+          sessionToken = downloadCredentials.sessionToken
       )
 
       ResponseEntity.ok(downloadPermission)
