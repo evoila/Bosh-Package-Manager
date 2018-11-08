@@ -5,6 +5,7 @@ import de.evoila.bpm.exceptions.PackageNotFoundException
 import de.evoila.bpm.rest.bodies.PackageBody
 import de.evoila.bpm.rest.bodies.S3Permission
 import de.evoila.bpm.service.AmazonS3Service
+import de.evoila.bpm.service.AmazonS3Service.Operation.*
 import de.evoila.bpm.service.PackageService
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -28,16 +29,15 @@ class PackageController(
     }
 
     val saved = packageService.save(packageBody)
-
-    val creds = amazonS3Service.generateTemporaryToken()
+    val uploadCredentials = amazonS3Service.getS3Credentials(UPLOAD)
 
     val uploadPermission = S3Permission(
         bucket = s3Config.bucket,
         region = s3Config.region,
-        authKey = creds.accessKeyId,
-        authSecret = creds.secretAccessKey,
+        authKey = uploadCredentials.accessKeyId,
+        authSecret = uploadCredentials.secretAccessKey,
         s3location = saved.s3location,
-        sessionToken = creds.sessionToken
+        sessionToken = uploadCredentials.sessionToken
     )
 
     log.info("Saved package ${saved.name}:${saved.version} by ${saved.vendor}")
@@ -65,9 +65,7 @@ class PackageController(
     } catch (e: PackageNotFoundException) {
       ResponseEntity.notFound().build()
     }
-
   }
-
 
   @GetMapping(value = ["download/{vendor}/{name}/{version}"])
   fun downloadPermissionByPackageByVendorNameVersion(@PathVariable(value = "vendor") vendor: String,
@@ -77,15 +75,15 @@ class PackageController(
     return try {
       val packageBody = packageService.getPackage(vendor, name, version)
 
-      val creds = amazonS3Service.generateTemporaryToken()
+      val downloadCredentials = amazonS3Service.getS3Credentials(DOWNLOAD)
 
       val downloadPermission = S3Permission(
           bucket = s3Config.bucket,
           region = s3Config.region,
-          authKey = creds.accessKeyId,
-          authSecret = creds.secretAccessKey,
+          authKey = downloadCredentials.accessKeyId,
+          authSecret = downloadCredentials.secretAccessKey,
           s3location = packageBody.s3location,
-          sessionToken = creds.sessionToken
+          sessionToken = downloadCredentials.sessionToken
       )
 
       ResponseEntity.ok(downloadPermission)
@@ -93,11 +91,6 @@ class PackageController(
 
       ResponseEntity.notFound().build()
     }
-  }
-
-  @DeleteMapping(value = ["package/{uuid}"])
-  fun deletePackageById() {
-
   }
 
   companion object {
