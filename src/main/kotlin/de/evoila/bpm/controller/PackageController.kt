@@ -19,8 +19,8 @@ class PackageController(
     val amazonS3Service: AmazonS3Service
 ) {
 
-  @PutMapping(value = ["upload/package"])
-  fun uploadPackage(@RequestParam(value = "force") force: Boolean, @RequestBody packageBody: PackageBody): ResponseEntity<Any> {
+  @GetMapping(value = ["upload/permission"])
+  fun getUploadPermission(@RequestParam(value = "force") force: Boolean, @RequestBody packageBody: PackageBody): ResponseEntity<Any> {
 
     if (!force) {
       packageService.checkIfPresent(packageBody)?.let {
@@ -28,7 +28,7 @@ class PackageController(
       }
     }
 
-    val saved = packageService.save(packageBody)
+    val s3location = packageService.putPendingPackage(packageBody)
     val uploadCredentials = amazonS3Service.getS3Credentials(UPLOAD)
 
     val uploadPermission = S3Permission(
@@ -36,13 +36,23 @@ class PackageController(
         region = s3Config.region,
         authKey = uploadCredentials.accessKeyId,
         authSecret = uploadCredentials.secretAccessKey,
-        s3location = saved.s3location,
+        s3location = s3location,
         sessionToken = uploadCredentials.sessionToken
     )
 
-    log.info("Saved package ${saved.name}:${saved.version} by ${saved.vendor}")
+    log.info("Granting permission to upload package '${packageBody.name}:${packageBody.version} by ${packageBody.vendor}'")
 
     return ResponseEntity.accepted().body(uploadPermission)
+  }
+
+  @PutMapping(value = ["package"])
+  fun uploadPackage(@RequestParam("location") key: String): ResponseEntity<Any> = try {
+    packageService.savePendingPackage(key)
+
+    ResponseEntity.ok().build()
+  } catch (e: PackageNotFoundException) {
+
+    ResponseEntity.notFound().build()
   }
 
   @GetMapping("package")
@@ -56,41 +66,40 @@ class PackageController(
   @GetMapping(value = ["package/{vendor}/{name}/{version}"])
   fun getPackageByVendorNameVersion(@PathVariable(value = "vendor") vendor: String,
                                     @PathVariable(value = "name") name: String,
-                                    @PathVariable(value = "version") version: String): ResponseEntity<Any> {
+                                    @PathVariable(value = "version") version: String
+  ): ResponseEntity<Any> = try {
+    val packageBody = packageService.getPackage(vendor, name, version)
 
-    return try {
-      val packageBody = packageService.getPackage(vendor, name, version)
+    log.info("Exposing package information for '$name:$version by $vendor'")
 
-      ResponseEntity.ok(packageBody)
-    } catch (e: PackageNotFoundException) {
-      ResponseEntity.notFound().build()
-    }
+    ResponseEntity.ok(packageBody)
+  } catch (e: PackageNotFoundException) {
+    ResponseEntity.notFound().build()
   }
 
   @GetMapping(value = ["download/{vendor}/{name}/{version}"])
   fun downloadPermissionByPackageByVendorNameVersion(@PathVariable(value = "vendor") vendor: String,
                                                      @PathVariable(value = "name") name: String,
-                                                     @PathVariable(value = "version") version: String): ResponseEntity<Any> {
+                                                     @PathVariable(value = "version") version: String
+  ): ResponseEntity<Any> = try {
+    val packageBody = packageService.getPackage(vendor, name, version)
 
-    return try {
-      val packageBody = packageService.getPackage(vendor, name, version)
+    val downloadCredentials = amazonS3Service.getS3Credentials(DOWNLOAD)
 
-      val downloadCredentials = amazonS3Service.getS3Credentials(DOWNLOAD)
+    val downloadPermission = S3Permission(
+        bucket = s3Config.bucket,
+        region = s3Config.region,
+        authKey = downloadCredentials.accessKeyId,
+        authSecret = downloadCredentials.secretAccessKey,
+        s3location = packageBody.s3location,
+        sessionToken = downloadCredentials.sessionToken
+    )
+    log.info("Created Permission to download package '$name:$version by $vendor'")
 
-      val downloadPermission = S3Permission(
-          bucket = s3Config.bucket,
-          region = s3Config.region,
-          authKey = downloadCredentials.accessKeyId,
-          authSecret = downloadCredentials.secretAccessKey,
-          s3location = packageBody.s3location,
-          sessionToken = downloadCredentials.sessionToken
-      )
+    ResponseEntity.ok(downloadPermission)
+  } catch (e: PackageNotFoundException) {
 
-      ResponseEntity.ok(downloadPermission)
-    } catch (e: PackageNotFoundException) {
-
-      ResponseEntity.notFound().build()
-    }
+    ResponseEntity.notFound().build()
   }
 
   companion object {

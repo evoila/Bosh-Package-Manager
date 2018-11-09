@@ -13,8 +13,11 @@ data class Package(
     val vendor: String,
     @JsonProperty(value = "s3location")
     val s3location: String,
+    @JsonProperty(value = "uploadDate")
+    val uploadDate: String,
     @JsonProperty(value = "files")
     val files: List<String>,
     @JsonProperty("dependencies")
     val dependencies: List<Dependency>?
+
 ) : BaseEntity()

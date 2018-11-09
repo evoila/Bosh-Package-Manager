@@ -2,11 +2,14 @@ package de.evoila.bpm.service
 
 import de.evoila.bpm.entities.Package
 import de.evoila.bpm.exceptions.PackageNotFoundException
-import de.evoila.bpm.exceptions.PackageStoringException
+import de.evoila.bpm.helpers.PendingPackages
 import de.evoila.bpm.repositories.PackageRepository
 import de.evoila.bpm.rest.bodies.PackageBody
 import org.slf4j.LoggerFactory
+import org.springframework.scheduling.annotation.Async
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
+import java.time.Instant
 import java.util.*
 
 @Service
@@ -37,11 +40,10 @@ class PackageService(
     }
   }
 
-  @Throws(PackageStoringException::class)
-  fun save( packageBody: PackageBody
-  ): Package {
+  fun putPendingPackage(packageBody: PackageBody
+  ): String {
 
-    log.info("Saving package: $packageBody")
+    log.info("Pending package: $packageBody")
 
     packageRepository.findByVendorAndNameAndVersion(
         vendor = packageBody.vendor,
@@ -53,17 +55,39 @@ class PackageService(
       //TODO delete file in the S3 bucket!!!
     }
 
-    return packageRepository.save(Package(
+    val s3location = "${UUID.randomUUID()}.bpm"
+
+    pendingPackages.put(s3location, Package(
         name = packageBody.name,
         vendor = packageBody.vendor,
         version = packageBody.version,
-        s3location = "${UUID.randomUUID()}.bpm",
+        uploadDate = Instant.now().toString(),
+        s3location = s3location,
         files = packageBody.files,
         dependencies = packageBody.dependencies
     ))
+
+    return s3location
+  }
+
+
+  fun savePendingPackage(key: String) {
+
+    val packageToSave = pendingPackages.remove(key)
+        ?: throw PackageNotFoundException("The Package does not exist.")
+
+    packageRepository.save(packageToSave)
+    log.info("Save package: $packageToSave")
+  }
+
+  @Async
+  @Scheduled(fixedRate = 1800000)
+  fun startCleanUp() {
+    pendingPackages.cleanUp()
   }
 
   companion object {
     private val log = LoggerFactory.getLogger(PackageService::class.java)
+    private val pendingPackages = PendingPackages(900)
   }
 }
