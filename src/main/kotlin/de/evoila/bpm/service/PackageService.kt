@@ -64,7 +64,9 @@ class PackageService(
         uploadDate = Instant.now().toString(),
         s3location = s3location,
         files = packageBody.files,
-        dependencies = packageBody.dependencies
+        dependencies = packageBody.dependencies,
+        stemcell = packageBody.stemcell,
+        accessLevel = Package.AccessLevel.PRIVATE
     ))
 
     return s3location

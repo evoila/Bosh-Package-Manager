@@ -18,6 +18,15 @@ data class Package(
     @JsonProperty(value = "files")
     val files: List<String>,
     @JsonProperty("dependencies")
-    val dependencies: List<Dependency>?
+    val dependencies: List<Dependency>?,
+    @JsonProperty("accessLevel")
+    val accessLevel: AccessLevel,
+    @JsonProperty(value = "stemcell")
+    val stemcell: Stemcell?
+) : BaseEntity() {
 
-) : BaseEntity()
+  enum class AccessLevel {
+    PRIVATE, VENDOR, PUBLIC
+  }
+}
+

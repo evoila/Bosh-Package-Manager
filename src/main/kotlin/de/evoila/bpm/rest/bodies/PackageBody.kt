@@ -2,6 +2,7 @@ package de.evoila.bpm.rest.bodies
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import de.evoila.bpm.entities.Dependency
+import de.evoila.bpm.entities.Stemcell
 import org.springframework.data.elasticsearch.annotations.Field
 import org.springframework.data.elasticsearch.annotations.FieldType
 
@@ -15,6 +16,9 @@ data class PackageBody(
     @JsonProperty("files")
     val files: List<String>,
     @JsonProperty("dependencies")
-    @Field(type = FieldType.Nested)
-    val dependencies: List<Dependency>?
-)
+    val dependencies: List<Dependency>?,
+    @JsonProperty(value = "stemcell")
+    val stemcell: Stemcell?
+) {
+
+}
