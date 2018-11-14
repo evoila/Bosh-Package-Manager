@@ -2,16 +2,13 @@ package de.evoila.bpm.security.model
 
 import com.fasterxml.jackson.annotation.JsonBackReference
 import org.springframework.security.core.GrantedAuthority
-import javax.persistence.Entity
-import javax.persistence.JoinColumn
-import javax.persistence.ManyToOne
-import javax.persistence.Table
+import javax.persistence.*
 
 @Table(name = "roles")
 @Entity
 data class UserRole(
     var role: Role,
-    @ManyToOne
+    @ManyToOne(cascade = [CascadeType.ALL])
     @JoinColumn(name = "user_id")
     @JsonBackReference
     val user: User

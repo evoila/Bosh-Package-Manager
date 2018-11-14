@@ -1,9 +1,6 @@
 package de.evoila.bpm.security.model
 
-import com.fasterxml.jackson.annotation.JsonManagedReference
-import javax.persistence.Entity
-import javax.persistence.OneToMany
-import javax.persistence.Table
+import javax.persistence.*
 
 @Table(name = "vendors")
 @Entity
@@ -11,7 +8,17 @@ data class Vendor(
     val name: String
 ) : BaseEntity() {
 
-  @OneToMany(mappedBy = "vendor")
-  @JsonManagedReference
-  lateinit var users: List<User>
+  @ManyToMany(cascade = [CascadeType.ALL])
+  @JoinTable(
+      name = "vendor_members",
+      joinColumns = [JoinColumn(name = "user_id", referencedColumnName = "id")],
+      inverseJoinColumns = [JoinColumn(name = "vendor_id", referencedColumnName = "id")])
+  lateinit var members: List<User>
+
+  @ManyToMany(cascade = [CascadeType.ALL])
+  @JoinTable(
+      name = "vendor_admins",
+      joinColumns = [JoinColumn(name = "user_id", referencedColumnName = "id")],
+      inverseJoinColumns = [JoinColumn(name = "vendor_id", referencedColumnName = "id")])
+  lateinit var admins: List<User>
 }
