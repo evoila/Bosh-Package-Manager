@@ -24,7 +24,7 @@ data class Package(
     @JsonProperty(value = "stemcell")
     val stemcell: Stemcell?,
     @JsonProperty(value = "signed_with")
-    val signedWith: String
+    val signedWith: String?
 ) : BaseEntity() {
 
   enum class AccessLevel {

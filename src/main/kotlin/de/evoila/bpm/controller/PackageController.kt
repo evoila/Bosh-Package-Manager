@@ -26,6 +26,11 @@ class PackageController(
 
     val user: User = SecurityContextHolder.getContext().authentication.principal as User
 
+    if (!user.memberOf.plus(user.memberOf).stream().anyMatch { it.name == packageBody.vendor }) {
+
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("You are not a member of ${packageBody.vendor}")
+    }
+
     if (!force) {
       packageService.checkIfPresent(packageBody)?.let {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(it)

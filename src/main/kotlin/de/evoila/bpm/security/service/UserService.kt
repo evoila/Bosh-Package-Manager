@@ -2,7 +2,7 @@ package de.evoila.bpm.security.service
 
 import de.evoila.bpm.security.config.bCryptPasswordEncoder
 import de.evoila.bpm.security.controller.UserRegisterController
-import de.evoila.bpm.security.exceptions.UserExistsException
+import de.evoila.bpm.security.exceptions.UserException
 import de.evoila.bpm.security.model.User
 import de.evoila.bpm.security.model.UserRole
 import de.evoila.bpm.security.repositories.RoleRepository
@@ -28,10 +28,10 @@ class UserService(
   fun addNewUserIfUnusedData(user: UserRegisterController.RegisterBody) {
 
     if (userRepository.existsByEmail(user.email)) {
-      throw UserExistsException("Email '${user.email}' already in use.")
+      throw UserException("Email '${user.email}' already in use.")
     }
     if (userRepository.existsByUsername(user.username)) {
-      throw UserExistsException("User '${user.username}' already exists.")
+      throw UserException("User '${user.username}' already exists.")
     }
 
     val encodedUser = User(
