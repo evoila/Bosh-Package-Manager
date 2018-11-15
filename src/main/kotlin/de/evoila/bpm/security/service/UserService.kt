@@ -1,6 +1,7 @@
 package de.evoila.bpm.security.service
 
 import de.evoila.bpm.security.config.bCryptPasswordEncoder
+import de.evoila.bpm.security.controller.UserRegisterController
 import de.evoila.bpm.security.exceptions.UserExistsException
 import de.evoila.bpm.security.model.User
 import de.evoila.bpm.security.model.UserRole
@@ -10,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.stereotype.Service
+import java.util.*
 
 @Service
 class UserService(
@@ -23,7 +25,7 @@ class UserService(
         ?: throw UsernameNotFoundException("Did not find user $username")
   }
 
-  fun addNewUserIfUnusedData(user: User) {
+  fun addNewUserIfUnusedData(user: UserRegisterController.RegisterBody) {
 
     if (userRepository.existsByEmail(user.email)) {
       throw UserExistsException("Email '${user.email}' already in use.")
@@ -35,7 +37,8 @@ class UserService(
     val encodedUser = User(
         username = user.username,
         email = user.email,
-        password = bCryptPasswordEncoder().encode(user.password)
+        password = bCryptPasswordEncoder().encode(user.password),
+        signingKey = UUID.randomUUID().toString()
     )
 
     userRepository.save(encodedUser)

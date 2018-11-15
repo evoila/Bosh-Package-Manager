@@ -1,9 +1,11 @@
 package de.evoila.bpm.security.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import org.hibernate.annotations.LazyCollection
+import org.hibernate.annotations.LazyCollectionOption
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
-import java.util.*
+import org.springframework.transaction.annotation.Transactional
 import javax.persistence.*
 
 @Table(name = "users")
@@ -14,17 +16,18 @@ class User(
     val email: String,
     @Column(name = "signing_key")
     @JsonIgnore
-    val signingKey: String = UUID.randomUUID().toString()
+    val signingKey: String
 ) : BaseEntity(), UserDetails {
 
   @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], fetch = FetchType.EAGER)
   lateinit var roles: MutableList<UserRole>
 
-  @ManyToMany(mappedBy = "members")
-  lateinit var memberOf: List<Vendor>
+  @ManyToMany(mappedBy = "members", cascade = [CascadeType.MERGE])
+  lateinit var memberOf: Set<Vendor>
 
-  @ManyToMany(mappedBy = "admins")
-  lateinit var adminOf: List<Vendor>
+  @ManyToMany(mappedBy = "admins", cascade = [CascadeType.MERGE])
+  @LazyCollection(LazyCollectionOption.EXTRA)
+  lateinit var adminOf: Set<Vendor>
 
   override fun getPassword(): String = password
   override fun getUsername(): String = username
@@ -33,4 +36,14 @@ class User(
   override fun isCredentialsNonExpired(): Boolean = true
   override fun isAccountNonExpired(): Boolean = true
   override fun isAccountNonLocked(): Boolean = true
+
+  override fun equals(other: Any?): Boolean {
+
+    return if (other == null || other !is User) {
+      false
+    } else {
+
+      this.id == other.id
+    }
+  }
 }
