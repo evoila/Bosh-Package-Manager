@@ -40,7 +40,7 @@ class PackageService(
     }
   }
 
-  fun putPendingPackage(packageBody: PackageBody
+  fun putPendingPackage(packageBody: PackageBody, signingKey: String
   ): String {
 
     log.info("Pending package: $packageBody")
@@ -66,7 +66,8 @@ class PackageService(
         files = packageBody.files,
         dependencies = packageBody.dependencies,
         stemcell = packageBody.stemcell,
-        accessLevel = Package.AccessLevel.PRIVATE
+        accessLevel = Package.AccessLevel.PRIVATE,
+        signedWith = signingKey
     ))
 
     return s3location
