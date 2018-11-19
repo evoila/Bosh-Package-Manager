@@ -5,7 +5,6 @@ import org.hibernate.annotations.LazyCollection
 import org.hibernate.annotations.LazyCollectionOption
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
-import org.springframework.transaction.annotation.Transactional
 import javax.persistence.*
 
 @Table(name = "users")
@@ -25,11 +24,11 @@ class User(
   @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], fetch = FetchType.EAGER)
   lateinit var roles: MutableList<UserRole>
 
-  @ManyToMany(mappedBy = "members", cascade = [CascadeType.MERGE])
+  @ManyToMany(mappedBy = "members", cascade = [CascadeType.MERGE], fetch = FetchType.EAGER)
   @LazyCollection(value = LazyCollectionOption.FALSE)
   lateinit var memberOf: Set<Vendor>
 
-  @ManyToMany(mappedBy = "admins", cascade = [CascadeType.MERGE])
+  @ManyToMany(mappedBy = "admins", cascade = [CascadeType.MERGE], fetch = FetchType.EAGER)
   @LazyCollection(value = LazyCollectionOption.FALSE)
   lateinit var adminOf: Set<Vendor>
 

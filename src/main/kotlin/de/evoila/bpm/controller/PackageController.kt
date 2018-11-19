@@ -1,6 +1,7 @@
 package de.evoila.bpm.controller
 
 import de.evoila.bpm.config.S3Config
+import de.evoila.bpm.entities.Package
 import de.evoila.bpm.exceptions.PackageNotFoundException
 import de.evoila.bpm.rest.bodies.PackageBody
 import de.evoila.bpm.rest.bodies.S3Permission
@@ -77,7 +78,11 @@ class PackageController(
                                     @PathVariable(value = "name") name: String,
                                     @PathVariable(value = "version") version: String
   ): ResponseEntity<Any> = try {
-    val packageBody = packageService.getPackage(vendor, name, version)
+
+    val any = SecurityContextHolder.getContext().authentication.principal
+    val user: User? = if (any is User) any else null
+
+    val packageBody = packageService.accessPackage(vendor, name, version, user)
 
     log.info("Exposing package information for '$name:$version by $vendor'")
 
@@ -91,7 +96,10 @@ class PackageController(
                                                      @PathVariable(value = "name") name: String,
                                                      @PathVariable(value = "version") version: String
   ): ResponseEntity<Any> = try {
-    val packageBody = packageService.getPackage(vendor, name, version)
+    val any = SecurityContextHolder.getContext().authentication.principal
+    val user: User? = if (any is User) any else null
+
+    val packageBody = packageService.accessPackage(vendor, name, version, user)
 
     val downloadCredentials = amazonS3Service.getS3Credentials(DOWNLOAD)
 
@@ -109,6 +117,22 @@ class PackageController(
   } catch (e: PackageNotFoundException) {
 
     ResponseEntity.notFound().build()
+  }
+
+  @PatchMapping(value = ["publish/{vendor}/{name}/{version}"])
+  fun publishPackage(@PathVariable(value = "vendor") vendor: String,
+                     @PathVariable(value = "name") name: String,
+                     @PathVariable(value = "version") version: String,
+                     @RequestParam(value = "access") access: String
+  ): ResponseEntity<Any> = try {
+    val user: User = SecurityContextHolder.getContext().authentication.principal as User
+    val accessLevel = Package.AccessLevel.valueOf(access)
+    val status = packageService.alterAccessLevel(vendor, name, version, user, accessLevel)
+
+    ResponseEntity.status(status).build()
+  } catch (e: Exception) {
+
+    ResponseEntity.badRequest().body(e.message)
   }
 
   companion object {

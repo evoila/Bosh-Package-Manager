@@ -18,7 +18,7 @@ data class PackageBody(
     @JsonProperty("dependencies")
     val dependencies: List<Dependency>?,
     @JsonProperty(value = "stemcell")
-    val stemcell: Stemcell?
-) {
-
-}
+    val stemcell: Stemcell?,
+    @JsonProperty("description")
+    val description: String?
+)

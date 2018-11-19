@@ -29,6 +29,7 @@ class SecurityConfig(
         .antMatchers(HttpMethod.POST, *VENDOR_PATH).hasAuthority(GUEST.name)
         .antMatchers(HttpMethod.PATCH, *VENDOR_PATH).hasAuthority(GUEST.name)
         .antMatchers(HttpMethod.DELETE, *VENDOR_PATH).hasAuthority(GUEST.name)
+        .antMatchers("/publish/**").hasAnyAuthority(VENDOR.name)
         .and().csrf().disable()
   }
 
