@@ -32,6 +32,10 @@ class PackageController(
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("You are not a member of ${packageBody.vendor}")
     }
 
+    if (packageBody.name.isEmpty() || packageBody.vendor.isEmpty() || packageBody.version.isEmpty()) {
+      return ResponseEntity.badRequest().body("A package needs a name, version and a resisted vendor.")
+    }
+
     if (!force) {
       packageService.checkIfPresent(packageBody)?.let {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(it)
