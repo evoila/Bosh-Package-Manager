@@ -13,6 +13,4 @@ class KeycloakConfig {
   lateinit var username: String
   lateinit var password: String
   lateinit var clientId: String
-
-
 }

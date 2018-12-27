@@ -1,5 +1,8 @@
 package de.evoila.bpm.security.config
 
-class ScopeAuthority(scope: String) : GrantedAuthority {
+import org.springframework.security.core.GrantedAuthority
 
+class ScopeAuthority(private val authority: String) : GrantedAuthority {
+
+  override fun getAuthority(): String = authority
 }
