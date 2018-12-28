@@ -1,5 +1,7 @@
 package de.evoila.bpm.security.service
 
+/*
+
 import de.evoila.bpm.security.config.bCryptPasswordEncoder
 import de.evoila.bpm.security.controller.UserController
 import de.evoila.bpm.security.exceptions.UserException
@@ -12,6 +14,7 @@ import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.stereotype.Service
 import java.util.*
+
 
 @Service
 class UserService(
@@ -57,3 +60,5 @@ class UserService(
 
 
 }
+
+*/

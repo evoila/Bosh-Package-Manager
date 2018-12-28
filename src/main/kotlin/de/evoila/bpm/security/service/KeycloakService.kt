@@ -11,7 +11,6 @@ import org.keycloak.representations.idm.CredentialRepresentation
 import org.keycloak.representations.idm.IdentityProviderRepresentation
 import org.keycloak.representations.idm.UserRepresentation
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.io.IOException
 import java.util.*

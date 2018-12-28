@@ -4,7 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-@ConfigurationProperties(prefix = "keycloak")
+@ConfigurationProperties(prefix = "custom")
 class KeycloakConfig {
 
   lateinit var endpoint: String
