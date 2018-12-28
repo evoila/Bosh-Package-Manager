@@ -3,7 +3,6 @@ package de.evoila.bpm.security.controller
 import de.evoila.bpm.security.config.AuthConfig
 import de.evoila.bpm.security.responses.LoginUrl
 import org.springframework.http.ResponseEntity
-import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
