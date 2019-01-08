@@ -1,70 +1,27 @@
 package de.evoila.bpm.security.config
 
-import de.evoila.bpm.security.model.UserRole.Role.*
 import org.keycloak.adapters.springsecurity.KeycloakConfiguration
 import org.keycloak.adapters.springsecurity.client.KeycloakClientRequestFactory
+import org.keycloak.adapters.springsecurity.client.KeycloakRestTemplate
 import org.keycloak.adapters.springsecurity.config.KeycloakWebSecurityConfigurerAdapter
+import org.keycloak.adapters.springsecurity.filter.KeycloakAuthenticationProcessingFilter
+import org.keycloak.adapters.springsecurity.filter.KeycloakPreAuthActionsFilter
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.config.ConfigurableBeanFactory
+import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
-import org.springframework.core.annotation.Order
+import org.springframework.context.annotation.Scope
 import org.springframework.http.HttpMethod
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
 import org.springframework.security.config.http.SessionCreationPolicy
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
-import org.springframework.security.web.authentication.logout.LogoutFilter
-import org.keycloak.adapters.springsecurity.client.KeycloakRestTemplate
-import org.springframework.beans.factory.config.ConfigurableBeanFactory
-import org.springframework.context.annotation.Scope
+import org.springframework.security.core.authority.mapping.SimpleAuthorityMapper
 import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy
-import org.springframework.boot.web.servlet.FilterRegistrationBean
-import org.keycloak.adapters.springsecurity.filter.KeycloakPreAuthActionsFilter
-import org.keycloak.adapters.springsecurity.filter.KeycloakAuthenticationProcessingFilter
-
-
-//
-//@Configuration
-//@EnableWebSecurity
-//@Order(1)
-//class SecurityConfig(
-//    val userService: UserService
-//) : WebSecurityConfigurerAdapter() {
-//
-//
-//  override fun configure(http: HttpSecurity) {
-//    http.httpBasic().and()
-//        .authorizeRequests()
-//        .antMatchers(Path.UPLOAD).hasAnyAuthority(ADMIN.name, VENDOR.name)
-//        .antMatchers(HttpMethod.DELETE, *Path.PACKAGE).hasAuthority(ADMIN.name)
-//        .antMatchers(HttpMethod.PUT, *Path.PACKAGE).hasAuthority(ADMIN.name)
-//        .antMatchers(HttpMethod.PATCH, *Path.PACKAGE).hasAuthority(ADMIN.name)
-//        .antMatchers(HttpMethod.PUT, *Path.VENDOR).hasAuthority(GUEST.name)
-//        .antMatchers(HttpMethod.POST, *Path.VENDOR).hasAuthority(GUEST.name)
-//        .antMatchers(HttpMethod.PATCH, *Path.VENDOR).hasAuthority(GUEST.name)
-//        .antMatchers(HttpMethod.DELETE, *Path.VENDOR).hasAuthority(GUEST.name)
-//        .antMatchers("/publish/**").hasAnyAuthority(VENDOR.name)
-//        .and().csrf().disable()
-//  }
-//
-//  @Autowired
-//  fun configureGlobal(auth: AuthenticationManagerBuilder) {
-//    auth.userDetailsService(userService).passwordEncoder(bCryptPasswordEncoder())
-//  }
-//
-//}
-//
-//fun bCryptPasswordEncoder(): BCryptPasswordEncoder {
-//  return BCryptPasswordEncoder()
-//}
-
 
 @KeycloakConfiguration
 @EnableWebSecurity
-@Order(10)
 class KeycloakSecurityConfig(
     val keycloakClientRequestFactory: KeycloakClientRequestFactory
 ) : KeycloakWebSecurityConfigurerAdapter() {
@@ -84,7 +41,8 @@ class KeycloakSecurityConfig(
         .sessionAuthenticationStrategy(sessionAuthenticationStrategy())
         .and()
         .authorizeRequests()
-        .antMatchers(HttpMethod.GET, *Path.PACKAGE).hasAuthority(GUEST.name)
+        .antMatchers(HttpMethod.GET, *Path.PACKAGE).hasRole("Vendor")
+        .anyRequest().permitAll()
   }
 
   @Bean
@@ -107,6 +65,15 @@ class KeycloakSecurityConfig(
     val registrationBean = FilterRegistrationBean(filter)
     registrationBean.isEnabled = false
     return registrationBean
+  }
+
+  @Autowired
+  @Throws(Exception::class)
+  fun configureGlobal(auth: AuthenticationManagerBuilder) {
+    val keyCloakAuthProvider = keycloakAuthenticationProvider()
+    keyCloakAuthProvider.setGrantedAuthoritiesMapper(SimpleAuthorityMapper())
+
+    auth.authenticationProvider(keyCloakAuthProvider)
   }
 }
 
