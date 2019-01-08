@@ -1,9 +1,7 @@
 package de.evoila.bpm.entities
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import org.springframework.data.elasticsearch.annotations.Document
 
-@Document(indexName = "packages")
 data class Package(
     @JsonProperty(value = "name")
     val name: String,

@@ -22,6 +22,24 @@ class PackageController(
     val amazonS3Service: AmazonS3Service
 ) {
 
+
+  @GetMapping(value = ["packages"])
+  fun getAll(): ResponseEntity<Any> {
+    val result = packageService.getAllPackages()
+
+    return ResponseEntity.ok(result)
+  }
+
+
+  @GetMapping(value = ["packages/{id}"])
+  fun getById(@PathVariable(value = "id") id: String): ResponseEntity<Any> {
+
+    val result = packageService.findByid(id)
+
+    return result?.let { ResponseEntity.ok<Any>(it) } ?: ResponseEntity.notFound().build<Any>()
+  }
+
+
   @PostMapping(value = ["upload/permission"])
   fun getUploadPermission(@RequestParam(value = "force") force: Boolean, @RequestBody packageBody: PackageBody): ResponseEntity<Any> {
 
@@ -69,10 +87,10 @@ class PackageController(
     ResponseEntity.notFound().build()
   }
 
-  @GetMapping("package")
+  @GetMapping("packages")
   fun getPackagesByName(@RequestParam(value = "name") name: String): ResponseEntity<Any> {
 
-    val packages = packageService.getPackages(name)
+    val packages = packageService.getPackagesByName(name)
 
     return ResponseEntity.ok(packages)
   }
