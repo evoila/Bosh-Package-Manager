@@ -57,6 +57,15 @@ dependencies {
     compile('org.springframework.boot:spring-boot-starter-jdbc')
     compile('org.springframework.boot:spring-boot-starter-security')
 
+    compile group: 'org.keycloak', name: 'keycloak-spring-security-adapter', version: '4.8.1.Final'
+    compile group: 'org.keycloak', name: 'keycloak-spring-boot-starter', version: '4.8.1.Final'
+
+    compile group: 'org.keycloak', name: 'keycloak-core', version: '4.6.0.Final'
+    compile group: 'org.keycloak', name: 'keycloak-admin-client', version: '4.6.0.Final'
+    compile group: 'org.jboss.resteasy', name: 'resteasy-client', version: '3.6.2.Final'
+
+
+
     compile('com.fasterxml.jackson.module:jackson-module-kotlin:2.9.+')
 
     compile("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}")

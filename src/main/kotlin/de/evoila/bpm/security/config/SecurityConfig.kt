@@ -1,51 +1,84 @@
 package de.evoila.bpm.security.config
 
-import de.evoila.bpm.security.model.UserRole.Role.*
-import de.evoila.bpm.security.service.UserService
-import org.springframework.context.annotation.Configuration
+import org.keycloak.adapters.springsecurity.KeycloakConfiguration
+import org.keycloak.adapters.springsecurity.client.KeycloakClientRequestFactory
+import org.keycloak.adapters.springsecurity.client.KeycloakRestTemplate
+import org.keycloak.adapters.springsecurity.config.KeycloakWebSecurityConfigurerAdapter
+import org.keycloak.adapters.springsecurity.filter.KeycloakAuthenticationProcessingFilter
+import org.keycloak.adapters.springsecurity.filter.KeycloakPreAuthActionsFilter
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.config.ConfigurableBeanFactory
+import org.springframework.boot.web.servlet.FilterRegistrationBean
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Scope
 import org.springframework.http.HttpMethod
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
-import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.core.authority.mapping.SimpleAuthorityMapper
+import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy
+import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy
 
-
-@Configuration
+@KeycloakConfiguration
 @EnableWebSecurity
-class SecurityConfig(
-    val userService: UserService
-) : WebSecurityConfigurerAdapter() {
+class KeycloakSecurityConfig(
+    val keycloakClientRequestFactory: KeycloakClientRequestFactory
+) : KeycloakWebSecurityConfigurerAdapter() {
+
+  override fun sessionAuthenticationStrategy(): SessionAuthenticationStrategy {
+    return NullAuthenticatedSessionStrategy()
+  }
 
   override fun configure(http: HttpSecurity) {
-    http.httpBasic().and()
+
+    super.configure(http)
+    http.cors()
+        .and()
+        .csrf()
+        .disable()
+        .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        .sessionAuthenticationStrategy(sessionAuthenticationStrategy())
+        .and()
         .authorizeRequests()
-        .antMatchers(UPLOAD_PATH).hasAnyAuthority(ADMIN.name, VENDOR.name)
-        .antMatchers(HttpMethod.DELETE, *PACKAGE_PATH).hasAuthority(ADMIN.name)
-        .antMatchers(HttpMethod.PUT, *PACKAGE_PATH).hasAuthority(ADMIN.name)
-        .antMatchers(HttpMethod.PATCH, *PACKAGE_PATH).hasAuthority(ADMIN.name)
-        .antMatchers(HttpMethod.PUT, *VENDOR_PATH).hasAuthority(GUEST.name)
-        .antMatchers(HttpMethod.POST, *VENDOR_PATH).hasAuthority(GUEST.name)
-        .antMatchers(HttpMethod.PATCH, *VENDOR_PATH).hasAuthority(GUEST.name)
-        .antMatchers(HttpMethod.DELETE, *VENDOR_PATH).hasAuthority(GUEST.name)
-        .antMatchers("/publish/**").hasAnyAuthority(VENDOR.name)
-        .and().csrf().disable()
+        .antMatchers(HttpMethod.GET, *Path.PACKAGE).hasRole("Vendor")
+        .anyRequest().permitAll()
+  }
+
+  @Bean
+  @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+  fun keycloakRestTemplate(): KeycloakRestTemplate {
+    return KeycloakRestTemplate(keycloakClientRequestFactory)
+  }
+
+  @Bean
+  fun keycloakAuthenticationProcessingFilterRegistrationBean(
+      filter: KeycloakAuthenticationProcessingFilter): FilterRegistrationBean<*> {
+    val registrationBean = FilterRegistrationBean(filter)
+    registrationBean.isEnabled = false
+    return registrationBean
+  }
+
+  @Bean
+  fun keycloakPreAuthActionsFilterRegistrationBean(
+      filter: KeycloakPreAuthActionsFilter): FilterRegistrationBean<*> {
+    val registrationBean = FilterRegistrationBean(filter)
+    registrationBean.isEnabled = false
+    return registrationBean
   }
 
   @Autowired
+  @Throws(Exception::class)
   fun configureGlobal(auth: AuthenticationManagerBuilder) {
-    auth.userDetailsService(userService).passwordEncoder(bCryptPasswordEncoder())
-  }
+    val keyCloakAuthProvider = keycloakAuthenticationProvider()
+    keyCloakAuthProvider.setGrantedAuthoritiesMapper(SimpleAuthorityMapper())
 
-  companion object {
-
-    private const val UPLOAD_PATH = "/upload/"
-    private val PACKAGE_PATH = arrayOf("/rest/packages", "/rest/packages/**")
-    private val VENDOR_PATH = arrayOf("/rest/vendors", "/rest/vendors/*")
+    auth.authenticationProvider(keyCloakAuthProvider)
   }
 }
 
-fun bCryptPasswordEncoder(): BCryptPasswordEncoder {
-  return BCryptPasswordEncoder()
+object Path {
+  const val UPLOAD = "/upload/"
+  val PACKAGE = arrayOf("/rest/packages", "/rest/packages/**")
+  val VENDOR = arrayOf("/rest/vendors", "/rest/vendors/*")
 }

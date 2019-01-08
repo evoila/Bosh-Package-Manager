@@ -17,7 +17,6 @@ class PendingPackages(
     log.info("Starting clean up.")
 
     if (map.isNotEmpty()) {
-
       map = map.filterValues {
         log.info("Pending Package found! $it")
         !Instant.parse(it.uploadDate).isBefore(Instant.now().minusSeconds(allowedAge))
