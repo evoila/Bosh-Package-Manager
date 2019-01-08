@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
+import java.time.Instant
+import java.util.*
 
 @Service
 class PackageService(
@@ -32,32 +34,26 @@ class PackageService(
   @Throws(PackageNotFoundException::class)
   fun accessPackage(vendor: String, name: String, version: String, user: User?): Package =
       customPackageRepository.findByVendorAndNameAndVersion(vendor, name, version)
-          .orElseGet { throw PackageNotFoundException("didn't not find a package with vendor : $vendor , name : $name:$version") }
+          ?: throw PackageNotFoundException("didn't not find a package with vendor : $vendor , name : $name:$version")
 
   fun checkIfPresent(packageBody: PackageBody): Package? {
 
-    /*
-    return packageRepository.findByName(packageBody.name).find {
+
+    return customPackageRepository.getPackagesByName(packageBody.name).find {
       it.name == packageBody.name && it.vendor == packageBody.vendor && it.version == packageBody.version
-    }*/
-    TODO()
+    }
   }
 
   fun putPendingPackage(packageBody: PackageBody, signingKey: String
   ): String {
+    log.info("Pending package: $packageBody")
 
-    TODO()
-    //  log.info("Pending package: $packageBody")
-
-    /*
-    packageRepository.findByVendorAndNameAndVersion(
+    customPackageRepository.findByVendorAndNameAndVersion(
         vendor = packageBody.vendor,
         name = packageBody.name,
-        version = packageBody.version).find {
-      it.name == packageBody.name && it.vendor == packageBody.vendor && it.version == packageBody.version
-    }?.let {
-      packageRepository.deleteById(it.id)
-      TODO delete outdated file in the S3 bucket!!
+        version = packageBody.version)?.let {
+      customPackageRepository.deleteById(it.id)
+      //   TODO delete outdated file in the S3 bucket !!
     }
 
 
@@ -79,24 +75,19 @@ class PackageService(
 
 
     return s3location
-
-    */
   }
 
   fun alterAccessLevel(vendor: String, name: String, version: String, user: User, accessLevel: Package.AccessLevel): Int {
 
-    /*
     val pack = accessPackage(vendor, name, version, user)
-    packageRepository.save(pack.changeAccessLevel(accessLevel))
+    customPackageRepository.save(pack.changeAccessLevel(accessLevel))
 
     return if (accessLevel == PUBLIC) {
       //TODO make control mechanism to notify admins for a package review before it goes public
       202
     } else {
       200
-    }*/
-
-    TODO()
+    }
   }
 
   fun savePendingPackage(key: String) {
@@ -106,7 +97,6 @@ class PackageService(
 
     customPackageRepository.save(packageToSave)
     log.info("Save package: $packageToSave")
-    TODO()
   }
 
   @Async

@@ -9,6 +9,7 @@ import org.elasticsearch.action.get.GetRequest
 import org.elasticsearch.action.get.GetResponse
 import org.elasticsearch.action.index.IndexRequest
 import org.elasticsearch.action.search.SearchRequest
+import org.elasticsearch.index.query.BoolQueryBuilder
 import org.elasticsearch.index.query.MatchQueryBuilder
 import org.elasticsearch.index.query.QueryBuilders
 import org.elasticsearch.search.builder.SearchSourceBuilder
@@ -41,8 +42,23 @@ class CustomPackageRepository(
     return entity
   }
 
-  fun findByVendorAndNameAndVersion(vendor: String, name: String, version: String): Optional<Package> {
-    TODO()
+  fun findByVendorAndNameAndVersion(vendor: String, name: String, version: String): Package? {
+
+    val searchSourceBuilder = SearchSourceBuilder()
+    val boolQueryBuilder = BoolQueryBuilder()
+    boolQueryBuilder.should(MatchQueryBuilder("vendor", vendor))
+    boolQueryBuilder.should(MatchQueryBuilder("name", name))
+    boolQueryBuilder.should(MatchQueryBuilder("version", version))
+
+    searchSourceBuilder
+        .query(boolQueryBuilder)
+        .size(1)
+    val searchRequest = SearchRequest(INDEX, TYPE)
+    val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
+
+    val objectMapper = ObjectMapper()
+
+    return response.hits.map { objectMapper.readValue(it.sourceAsString, Package::class.java) }.firstOrNull()
   }
 
 
