@@ -6,11 +6,11 @@ import de.evoila.bpm.entities.Package.AccessLevel.*
 import de.evoila.bpm.exceptions.PackageNotFoundException
 import de.evoila.bpm.helpers.PendingPackages
 import de.evoila.bpm.rest.bodies.PackageBody
-import de.evoila.bpm.security.model.User
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
+import java.security.Principal
 import java.time.Instant
 import java.util.*
 
@@ -32,7 +32,7 @@ class PackageService(
   }
 
   @Throws(PackageNotFoundException::class)
-  fun accessPackage(vendor: String, name: String, version: String, user: User?): Package =
+  fun accessPackage(vendor: String, name: String, version: String, user: Principal?): Package =
       customPackageRepository.findByVendorAndNameAndVersion(vendor, name, version)
           ?: throw PackageNotFoundException("didn't not find a package with vendor : $vendor , name : $name:$version")
 
@@ -77,7 +77,7 @@ class PackageService(
     return s3location
   }
 
-  fun alterAccessLevel(vendor: String, name: String, version: String, user: User, accessLevel: Package.AccessLevel): Int {
+  fun alterAccessLevel(vendor: String, name: String, version: String, user: Principal, accessLevel: Package.AccessLevel): Int {
 
     val pack = accessPackage(vendor, name, version, user)
     customPackageRepository.save(pack.changeAccessLevel(accessLevel))

@@ -2,6 +2,8 @@ package de.evoila.bpm.custom.elasticsearch
 
 import de.evoila.bpm.config.ElasticSearchConfig
 import org.apache.http.HttpHost
+import org.elasticsearch.action.delete.DeleteRequest
+import org.elasticsearch.action.delete.DeleteResponse
 import org.elasticsearch.action.get.GetRequest
 import org.elasticsearch.action.get.GetResponse
 import org.elasticsearch.action.index.IndexRequest
@@ -43,6 +45,14 @@ class ElasticSearchRestTemplate(
   fun performGetRequest(request: GetRequest): GetResponse {
     val client = buildClient()
     val response = client.get(request, RequestOptions.DEFAULT)
+    client.close()
+
+    return response
+  }
+
+  fun performDeleteRequest(request: DeleteRequest): DeleteResponse {
+    val client = buildClient()
+    val response = client.delete(request, RequestOptions.DEFAULT)
     client.close()
 
     return response
