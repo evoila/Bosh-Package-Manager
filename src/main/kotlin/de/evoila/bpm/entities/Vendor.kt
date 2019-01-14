@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 data class Vendor(
     @JsonProperty(value = "name")
     val name: String,
+    @JsonProperty(value = "members")
     val members: List<String>
 ) : BaseEntity() {
 

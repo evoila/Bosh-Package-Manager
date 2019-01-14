@@ -12,7 +12,6 @@ import de.evoila.bpm.service.VendorService
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.*
 import java.security.Principal
 
@@ -24,6 +23,17 @@ class PackageController(
     val amazonS3Service: AmazonS3Service
 ) {
 
+  @GetMapping(value = ["auth-test"])
+  fun authTest(principal: Principal?): ResponseEntity<String> {
+
+    log.info("Moin moin Auth")
+    return principal?.let {
+      log.info("${principal.name} is logged in!")
+
+      ResponseEntity.ok("${principal.name} is logged in!")
+    }
+        ?: ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Didn't work")
+  }
 
   @GetMapping(value = ["packages"])
   fun getAll(): ResponseEntity<Any> {
@@ -32,7 +42,6 @@ class PackageController(
     return ResponseEntity.ok(result)
   }
 
-
   @GetMapping(value = ["packages/{id}"])
   fun getById(@PathVariable(value = "id") id: String): ResponseEntity<Any> {
 
@@ -40,7 +49,6 @@ class PackageController(
 
     return result?.let { ResponseEntity.ok<Any>(it) } ?: ResponseEntity.notFound().build<Any>()
   }
-
 
   @PostMapping(value = ["upload/permission"])
   fun getUploadPermission(@RequestParam(value = "force") force: Boolean,

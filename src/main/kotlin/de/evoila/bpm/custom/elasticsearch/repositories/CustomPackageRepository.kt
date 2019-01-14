@@ -24,8 +24,7 @@ class CustomPackageRepository(
 ) : AbstractElasticSearchRepository<Package>(
     elasticSearchRestTemplate
 ) {
-  override val index: String = "package"
-  override val type: String = "doc"
+  override val index: String = "packages"
 
   fun findByVendorAndNameAndVersion(vendor: String, name: String, version: String): Package? {
 
@@ -39,7 +38,7 @@ class CustomPackageRepository(
         .query(boolQueryBuilder)
         .size(1)
 
-    val searchRequest = SearchRequest(index, type)
+    val searchRequest = SearchRequest().indices(index).types(type)
         .source(searchSourceBuilder)
     val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
     val objectMapper = ObjectMapper()
@@ -48,7 +47,7 @@ class CustomPackageRepository(
   }
 
   fun findAll(sort: Sort): List<Package> {
-    val searchRequest = SearchRequest(index, type)
+    val searchRequest = SearchRequest().indices(index).types(type)
     val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
     val objectMapper = ObjectMapper()
 
@@ -67,7 +66,7 @@ class CustomPackageRepository(
           .order(SortOrder.fromString(it.direction.name)))
     }
 
-    val searchRequest = SearchRequest(index, type).source(searchSourceBuilder)
+    val searchRequest = SearchRequest().indices(index).types(type).source(searchSourceBuilder)
     val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
 
     val objectMapper = ObjectMapper()
@@ -81,7 +80,7 @@ class CustomPackageRepository(
   override fun findAll(): List<Package> {
     val searchSourceBuilder = SearchSourceBuilder()
     searchSourceBuilder.query(QueryBuilders.matchAllQuery())
-    val searchRequest = SearchRequest(index, type)
+    val searchRequest = SearchRequest().indices(index).types(type)
     searchRequest.source(searchSourceBuilder)
     val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
     val objectMapper = ObjectMapper()
@@ -107,7 +106,7 @@ class CustomPackageRepository(
   fun getPackagesByName(name: String): List<Package> {
     val searchSourceBuilder = SearchSourceBuilder()
     searchSourceBuilder.query(MatchQueryBuilder("name", name))
-    val searchRequest = SearchRequest(index, type).source(searchSourceBuilder)
+    val searchRequest = SearchRequest().indices(index).types(type).source(searchSourceBuilder)
     val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
     val objectMapper = ObjectMapper()
 

@@ -9,6 +9,7 @@ import org.elasticsearch.action.get.GetRequest
 import org.elasticsearch.action.get.GetResponse
 import org.elasticsearch.action.index.IndexRequest
 import org.elasticsearch.action.search.SearchRequest
+import org.elasticsearch.common.xcontent.XContentType
 import org.slf4j.LoggerFactory
 import org.springframework.data.repository.CrudRepository
 
@@ -17,15 +18,18 @@ abstract class AbstractElasticSearchRepository<T : BaseEntity>(
 ) : CrudRepository<T, String> {
 
   abstract val index: String
-  abstract val type: String
+  val type: String = "_doc"
 
   override fun <S : T> save(entity: S): S {
 
     val objectMapper = ObjectMapper()
-    val indexRequest = IndexRequest(
-        index, type, entity.id
-    )
-    indexRequest.source(objectMapper.writeValueAsString(entity))
+    val indexRequest = IndexRequest()
+        .type(type)
+        .index(index)
+        .id(entity.id)
+
+    val body = objectMapper.writeValueAsString(entity)
+    indexRequest.source(body, XContentType.JSON)
 
     val indexResponse = elasticSearchRestTemplate.performIndexRequest(indexRequest)
 
@@ -74,13 +78,13 @@ abstract class AbstractElasticSearchRepository<T : BaseEntity>(
   }
 
   fun requestById(id: String): GetResponse {
-    val request = GetRequest(index, type, id)
+    val request = GetRequest().index(index).type(type).id(id)
 
     return elasticSearchRestTemplate.performGetRequest(request)
   }
 
   override fun count(): Long {
-    val searchRequest = SearchRequest(index, type)
+    val searchRequest = SearchRequest().indices(index).types(type)
     val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
 
     return response.hits.totalHits

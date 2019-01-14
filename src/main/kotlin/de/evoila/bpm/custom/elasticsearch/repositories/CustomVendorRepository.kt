@@ -16,8 +16,7 @@ class CustomVendorRepository(
     elasticSearchRestTemplate: ElasticSearchRestTemplate
 ) : AbstractElasticSearchRepository<Vendor>(elasticSearchRestTemplate) {
 
-  override val index: String = "vendor"
-  override val type: String = "doc"
+  override val index: String = "vendors"
 
   override fun findAll(): List<Vendor> {
     val searchSourceBuilder = SearchSourceBuilder()
@@ -48,7 +47,9 @@ class CustomVendorRepository(
   fun findByName(name: String): Vendor? {
     val searchSourceBuilder = SearchSourceBuilder()
     searchSourceBuilder.query(MatchQueryBuilder("name", name))
-    val searchRequest = SearchRequest(index, type).source(searchSourceBuilder)
+
+
+    val searchRequest = SearchRequest().indices(index).types(type).source(searchSourceBuilder)
     val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
     val objectMapper = ObjectMapper()
 
