@@ -1,0 +1,10 @@
+{
+  "realm": "BOSH-Package-Manager",
+  "bearer-only": true,
+  "auth-server-url": "http://localhost:8081/auth",
+  "ssl-required": "external",
+  "resource": "bosh-package-manager-openid",
+  "verify-token-audience": true,
+  "use-resource-role-mappings": true,
+  "confidential-port": 0
+}

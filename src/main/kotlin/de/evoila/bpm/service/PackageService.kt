@@ -1,59 +1,61 @@
 package de.evoila.bpm.service
 
+import de.evoila.bpm.custom.elasticsearch.repositories.CustomPackageRepository
 import de.evoila.bpm.entities.Package
+import de.evoila.bpm.entities.Package.AccessLevel.*
 import de.evoila.bpm.exceptions.PackageNotFoundException
 import de.evoila.bpm.helpers.PendingPackages
-import de.evoila.bpm.repositories.PackageRepository
 import de.evoila.bpm.rest.bodies.PackageBody
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
+import java.security.Principal
 import java.time.Instant
 import java.util.*
 
 @Service
 class PackageService(
-    val packageRepository: PackageRepository
+    val customPackageRepository: CustomPackageRepository
 ) {
 
-  fun getPackages(name: String): List<Package> {
+  fun getAllPackages(): List<Package> = customPackageRepository.findAll()
 
-    return packageRepository.findByName(name)
+
+  fun getPackagesByName(name: String): List<Package> = customPackageRepository.getPackagesByName(name)
+
+  fun findByid(id: String): Package? {
+
+    val result = customPackageRepository.findById(id)
+
+    return result.orElseGet { null }
   }
 
   @Throws(PackageNotFoundException::class)
-  fun getPackage(vendor: String, name: String, version: String): Package {
-
-    val packages = packageRepository.findByVendorAndNameAndVersion(vendor, name, version)
-
-    return packages.find {
-      it.name == name && it.vendor == vendor && it.version == version
-
-    } ?: throw PackageNotFoundException("didn't not find a package with vendor : $vendor , name : $name:$version")
-  }
+  fun accessPackage(vendor: String, name: String, version: String, user: Principal?): Package =
+      customPackageRepository.findByVendorAndNameAndVersion(vendor, name, version)
+          ?: throw PackageNotFoundException("didn't not find a package with vendor : $vendor , name : $name:$version")
 
   fun checkIfPresent(packageBody: PackageBody): Package? {
 
-    return packageRepository.findByName(packageBody.name).find {
+
+    return customPackageRepository.getPackagesByName(packageBody.name).find {
       it.name == packageBody.name && it.vendor == packageBody.vendor && it.version == packageBody.version
     }
   }
 
   fun putPendingPackage(packageBody: PackageBody, signingKey: String
   ): String {
-
     log.info("Pending package: $packageBody")
 
-    packageRepository.findByVendorAndNameAndVersion(
+    customPackageRepository.findByVendorAndNameAndVersion(
         vendor = packageBody.vendor,
         name = packageBody.name,
-        version = packageBody.version).find {
-      it.name == packageBody.name && it.vendor == packageBody.vendor && it.version == packageBody.version
-    }?.let {
-      packageRepository.deleteById(it.id)
-      //TODO delete file in the S3 bucket!!!
+        version = packageBody.version)?.let {
+      customPackageRepository.deleteById(it.id)
+      //   TODO delete outdated file in the S3 bucket !!
     }
+
 
     val s3location = "${UUID.randomUUID()}.bpm"
 
@@ -66,20 +68,34 @@ class PackageService(
         files = packageBody.files,
         dependencies = packageBody.dependencies,
         stemcell = packageBody.stemcell,
-        accessLevel = Package.AccessLevel.PRIVATE,
-        signedWith = signingKey
+        accessLevel = PRIVATE,
+        signedWith = signingKey,
+        description = packageBody.description
     ))
+
 
     return s3location
   }
 
+  fun alterAccessLevel(vendor: String, name: String, version: String, user: Principal, accessLevel: Package.AccessLevel): Int {
+
+    val pack = accessPackage(vendor, name, version, user)
+    customPackageRepository.save(pack.changeAccessLevel(accessLevel))
+
+    return if (accessLevel == PUBLIC) {
+      //TODO make control mechanism to notify admins for a package review before it goes public
+      202
+    } else {
+      200
+    }
+  }
 
   fun savePendingPackage(key: String) {
 
     val packageToSave = pendingPackages.remove(key)
         ?: throw PackageNotFoundException("The Package does not exist.")
 
-    packageRepository.save(packageToSave)
+    customPackageRepository.save(packageToSave)
     log.info("Save package: $packageToSave")
   }
 
