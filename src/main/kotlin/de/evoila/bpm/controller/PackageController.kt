@@ -5,29 +5,62 @@ import de.evoila.bpm.entities.Package
 import de.evoila.bpm.exceptions.PackageNotFoundException
 import de.evoila.bpm.rest.bodies.PackageBody
 import de.evoila.bpm.rest.bodies.S3Permission
-import de.evoila.bpm.security.model.User
 import de.evoila.bpm.service.AmazonS3Service
 import de.evoila.bpm.service.AmazonS3Service.Operation.*
 import de.evoila.bpm.service.PackageService
+import de.evoila.bpm.service.VendorService
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.*
+import java.security.Principal
 
 @RestController
 class PackageController(
     val packageService: PackageService,
+    val vendorService: VendorService,
     val s3Config: S3Config,
     val amazonS3Service: AmazonS3Service
 ) {
 
+  @GetMapping(value = ["auth-test"])
+  fun authTest(principal: Principal?): ResponseEntity<String> {
+
+    log.info("Moin moin Auth")
+    return principal?.let {
+      log.info("${principal.name} is logged in!")
+
+      ResponseEntity.ok("${principal.name} is logged in!")
+    }
+        ?: ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Didn't work")
+  }
+
+  @GetMapping(value = ["packages"])
+  fun getAll(): ResponseEntity<Any> {
+    val result = packageService.getAllPackages()
+
+    return ResponseEntity.ok(result)
+  }
+
+  @GetMapping(value = ["packages/{id}"])
+  fun getById(@PathVariable(value = "id") id: String): ResponseEntity<Any> {
+
+    val result = packageService.findByid(id)
+
+    return result?.let { ResponseEntity.ok<Any>(it) } ?: ResponseEntity.notFound().build<Any>()
+  }
+
   @PostMapping(value = ["upload/permission"])
-  fun getUploadPermission(@RequestParam(value = "force") force: Boolean, @RequestBody packageBody: PackageBody): ResponseEntity<Any> {
+  fun getUploadPermission(@RequestParam(value = "force") force: Boolean,
+                          @RequestBody packageBody: PackageBody,
+                          principal: Principal?
+  ): ResponseEntity<Any> {
 
-    val user: User = SecurityContextHolder.getContext().authentication.principal as User
 
-    if (!user.memberOf.plus(user.memberOf).stream().anyMatch { it.name == packageBody.vendor }) {
+    val username = principal?.name ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+        .body("Please log yourself in.")
+
+    if (!vendorService.isMemberOf(username, packageBody.vendor)) {
 
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("You are not a member of ${packageBody.vendor}")
     }
@@ -42,7 +75,7 @@ class PackageController(
       }
     }
 
-    val s3location = packageService.putPendingPackage(packageBody, user.signingKey)
+    val s3location = packageService.putPendingPackage(packageBody, principal.name)
     val uploadCredentials = amazonS3Service.getS3Credentials(UPLOAD)
 
     val uploadPermission = S3Permission(
@@ -72,7 +105,7 @@ class PackageController(
   @GetMapping("package")
   fun getPackagesByName(@RequestParam(value = "name") name: String): ResponseEntity<Any> {
 
-    val packages = packageService.getPackages(name)
+    val packages = packageService.getPackagesByName(name)
 
     return ResponseEntity.ok(packages)
   }
@@ -80,13 +113,11 @@ class PackageController(
   @GetMapping(value = ["package/{vendor}/{name}/{version}"])
   fun getPackageByVendorNameVersion(@PathVariable(value = "vendor") vendor: String,
                                     @PathVariable(value = "name") name: String,
-                                    @PathVariable(value = "version") version: String
+                                    @PathVariable(value = "version") version: String,
+                                    principal: Principal?
   ): ResponseEntity<Any> = try {
 
-    val any = SecurityContextHolder.getContext().authentication.principal
-    val user: User? = if (any is User) any else null
-
-    val packageBody = packageService.accessPackage(vendor, name, version, user)
+    val packageBody = packageService.accessPackage(vendor, name, version, principal)
 
     log.info("Exposing package information for '$name:$version by $vendor'")
 
@@ -98,12 +129,11 @@ class PackageController(
   @GetMapping(value = ["download/{vendor}/{name}/{version}"])
   fun downloadPermissionByPackageByVendorNameVersion(@PathVariable(value = "vendor") vendor: String,
                                                      @PathVariable(value = "name") name: String,
-                                                     @PathVariable(value = "version") version: String
+                                                     @PathVariable(value = "version") version: String,
+                                                     principal: Principal?
   ): ResponseEntity<Any> = try {
-    val any = SecurityContextHolder.getContext().authentication.principal
-    val user: User? = if (any is User) any else null
 
-    val packageBody = packageService.accessPackage(vendor, name, version, user)
+    val packageBody = packageService.accessPackage(vendor, name, version, principal)
 
     val downloadCredentials = amazonS3Service.getS3Credentials(DOWNLOAD)
 
@@ -127,11 +157,13 @@ class PackageController(
   fun publishPackage(@PathVariable(value = "vendor") vendor: String,
                      @PathVariable(value = "name") name: String,
                      @PathVariable(value = "version") version: String,
-                     @RequestParam(value = "access") access: String
+                     @RequestParam(value = "access") access: String,
+                     principal: Principal
   ): ResponseEntity<Any> = try {
-    val user: User = SecurityContextHolder.getContext().authentication.principal as User
+
+
     val accessLevel = Package.AccessLevel.valueOf(access)
-    val status = packageService.alterAccessLevel(vendor, name, version, user, accessLevel)
+    val status = packageService.alterAccessLevel(vendor, name, version, principal, accessLevel)
 
     ResponseEntity.status(status).build()
   } catch (e: Exception) {
