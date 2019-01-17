@@ -41,7 +41,6 @@ class KeycloakSecurityConfig(
         .sessionAuthenticationStrategy(sessionAuthenticationStrategy())
         .and()
         .authorizeRequests()
-        .antMatchers(HttpMethod.GET, *Path.PACKAGE).hasRole("Vendor")
         .anyRequest().permitAll()
   }
 
@@ -75,10 +74,4 @@ class KeycloakSecurityConfig(
 
     auth.authenticationProvider(keyCloakAuthProvider)
   }
-}
-
-object Path {
-  const val UPLOAD = "/upload/"
-  val PACKAGE = arrayOf("/rest/packages", "/rest/packages/**")
-  val VENDOR = arrayOf("/rest/vendors", "/rest/vendors/*")
 }

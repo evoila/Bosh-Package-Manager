@@ -8,6 +8,8 @@ import de.evoila.bpm.helpers.PendingPackages
 import de.evoila.bpm.rest.bodies.PackageBody
 import de.evoila.bpm.security.filter.PackageAccessFilter
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
@@ -20,8 +22,8 @@ class PackageService(
     val packageAccessFilter: PackageAccessFilter
 ) {
 
-  fun getAllPackages(username: String?): List<Package> =
-      packageAccessFilter.filterPackageList(username, customPackageRepository.findAll())
+  fun getAllPackages(username: String?, pageable: Pageable): Page<Package> =
+      packageAccessFilter.filterPackageList(username, customPackageRepository.findAll(pageable))
 
   fun getPackagesByName(username: String?, packageName: String): List<Package> =
       packageAccessFilter.filterPackageList(username, customPackageRepository.getPackagesByName(packageName))
