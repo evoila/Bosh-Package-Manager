@@ -4,11 +4,18 @@ import de.evoila.bpm.custom.elasticsearch.repositories.CustomVendorRepository
 import org.springframework.stereotype.Service
 import de.evoila.bpm.entities.Package
 import de.evoila.bpm.entities.Package.AccessLevel.*
+import org.springframework.data.domain.Page
 
 @Service
 class PackageAccessFilter(
     var vendorRepository: CustomVendorRepository
 ) {
+
+  fun filterPackageList(username: String?, packages: Page<Package>): Page<Package> = packages.map { pack ->
+    return@map if (checkAccessToSinglePackage(username, pack)) {
+      pack
+    } else null
+  }
 
   fun filterPackageList(username: String?, packages: List<Package>): List<Package> = packages.filter { pack ->
     checkAccessToSinglePackage(username, pack)
