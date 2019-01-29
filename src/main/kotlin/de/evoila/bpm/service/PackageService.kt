@@ -44,10 +44,7 @@ class PackageService(
   }
 
   fun checkIfPresent(packageBody: PackageBody): Package? {
-
-    return customPackageRepository.getPackagesByName(packageBody.name).find {
-      it.name == packageBody.name && it.vendor == packageBody.vendor && it.version == packageBody.version
-    }
+    return customPackageRepository.findByVendorAndNameAndVersion(packageBody.vendor, packageBody.name, packageBody.version)
   }
 
   fun putPendingPackage(packageBody: PackageBody, signingKey: String
@@ -92,7 +89,10 @@ class PackageService(
 
     pack.dependencies?.forEach {
       val dependency = accessPackage(it.vendor, it.name, it.version, username)
-      alterAccessLevel(username, accessLevel, dependency)
+
+      if (dependency.accessLevel.isAbove(accessLevel)) {
+        alterAccessLevel(username, accessLevel, dependency)
+      }
     }
   }
 
