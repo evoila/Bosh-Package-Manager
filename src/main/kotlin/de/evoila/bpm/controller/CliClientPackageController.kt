@@ -15,8 +15,9 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.security.Principal
 
+@CrossOrigin(origins = ["http://localhost:4200"])
 @RestController
-class PackageController(
+class CliClientPackageController(
     val packageService: PackageService,
     val vendorService: VendorService,
     val s3Config: S3Config,
@@ -35,17 +36,10 @@ class PackageController(
         ?: ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Didn't work")
   }
 
-  @GetMapping(value = ["packages"])
-  fun getAll(): ResponseEntity<Any> {
-    val result = packageService.getAllPackages()
-
-    return ResponseEntity.ok(result)
-  }
-
   @GetMapping(value = ["packages/{id}"])
   fun getById(@PathVariable(value = "id") id: String): ResponseEntity<Any> {
 
-    val result = packageService.findByid(id)
+    val result = packageService.findById(id)
 
     return result?.let { ResponseEntity.ok<Any>(it) } ?: ResponseEntity.notFound().build<Any>()
   }
@@ -55,8 +49,6 @@ class PackageController(
                           @RequestBody packageBody: PackageBody,
                           principal: Principal?
   ): ResponseEntity<Any> {
-
-
     val username = principal?.name ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
         .body("Please log yourself in.")
 
@@ -102,10 +94,10 @@ class PackageController(
     ResponseEntity.notFound().build()
   }
 
-  @GetMapping("package")
-  fun getPackagesByName(@RequestParam(value = "name") name: String): ResponseEntity<Any> {
+  @GetMapping(value = ["package"])
+  fun getPackagesByName(@RequestParam(value = "name") name: String, principal: Principal?): ResponseEntity<Any> {
 
-    val packages = packageService.getPackagesByName(name)
+    val packages = packageService.getPackagesByName(principal?.name, name)
 
     return ResponseEntity.ok(packages)
   }
@@ -116,13 +108,12 @@ class PackageController(
                                     @PathVariable(value = "version") version: String,
                                     principal: Principal?
   ): ResponseEntity<Any> = try {
-
-    val packageBody = packageService.accessPackage(vendor, name, version, principal)
-
+    val packageBody = packageService.accessPackage(vendor, name, version, principal?.name)
     log.info("Exposing package information for '$name:$version by $vendor'")
 
     ResponseEntity.ok(packageBody)
   } catch (e: PackageNotFoundException) {
+
     ResponseEntity.notFound().build()
   }
 
@@ -132,11 +123,8 @@ class PackageController(
                                                      @PathVariable(value = "version") version: String,
                                                      principal: Principal?
   ): ResponseEntity<Any> = try {
-
-    val packageBody = packageService.accessPackage(vendor, name, version, principal)
-
+    val packageBody = packageService.accessPackage(vendor, name, version, principal?.name)
     val downloadCredentials = amazonS3Service.getS3Credentials(DOWNLOAD)
-
     val downloadPermission = S3Permission(
         bucket = s3Config.bucket,
         region = s3Config.region,
@@ -153,25 +141,22 @@ class PackageController(
     ResponseEntity.notFound().build()
   }
 
-  @PatchMapping(value = ["publish/{vendor}/{name}/{version}"])
-  fun publishPackage(@PathVariable(value = "vendor") vendor: String,
-                     @PathVariable(value = "name") name: String,
-                     @PathVariable(value = "version") version: String,
-                     @RequestParam(value = "access") access: String,
-                     principal: Principal
+  @PatchMapping(value = ["publish/{id}"])
+  fun publishPackage(
+      @PathVariable(value = "id") id: String,
+      @RequestParam(value = "access") access: String,
+      principal: Principal
   ): ResponseEntity<Any> = try {
-
-
     val accessLevel = Package.AccessLevel.valueOf(access)
-    val status = packageService.alterAccessLevel(vendor, name, version, principal, accessLevel)
+    packageService.alterAccessLevel(id, principal.name, accessLevel)
 
-    ResponseEntity.status(status).build()
-  } catch (e: Exception) {
+    ResponseEntity.ok().build()
+  } catch (e: PackageNotFoundException) {
 
-    ResponseEntity.badRequest().body(e.message)
+    ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.message)
   }
 
   companion object {
-    private val log = LoggerFactory.getLogger(PackageController::class.java)
+    private val log = LoggerFactory.getLogger(CliClientPackageController::class.java)
   }
 }

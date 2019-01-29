@@ -1,12 +1,10 @@
 package de.evoila.bpm.custom.elasticsearch.repositories
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import de.evoila.bpm.custom.elasticsearch.ElasticSearchRestTemplate
 import de.evoila.bpm.entities.Package
+import kotlinx.serialization.json.Json
 import org.elasticsearch.action.search.SearchRequest
-import org.elasticsearch.index.query.BoolQueryBuilder
-import org.elasticsearch.index.query.MatchQueryBuilder
-import org.elasticsearch.index.query.QueryBuilders
+import org.elasticsearch.index.query.*
 import org.elasticsearch.search.builder.SearchSourceBuilder
 import org.elasticsearch.search.sort.FieldSortBuilder
 import org.elasticsearch.search.sort.SortOrder
@@ -24,15 +22,21 @@ class CustomPackageRepository(
 ) : AbstractElasticSearchRepository<Package>(
     elasticSearchRestTemplate
 ) {
+
   override val index: String = "packages"
+
+  override fun serializeObject(entity: Package): String {
+
+    return Json.stringify(Package.serializer(), entity)
+  }
 
   fun findByVendorAndNameAndVersion(vendor: String, name: String, version: String): Package? {
 
     val searchSourceBuilder = SearchSourceBuilder()
     val boolQueryBuilder = BoolQueryBuilder()
-    boolQueryBuilder.should(MatchQueryBuilder("vendor", vendor))
-    boolQueryBuilder.should(MatchQueryBuilder("name", name))
-    boolQueryBuilder.should(MatchQueryBuilder("version", version))
+    boolQueryBuilder.filter(MatchQueryBuilder("vendor_keyword", vendor).operator(Operator.AND))
+    boolQueryBuilder.filter(MatchQueryBuilder("name_keyword", name).operator(Operator.AND))
+    boolQueryBuilder.filter(MatchQueryBuilder("version_keyword", version).operator(Operator.AND))
 
     searchSourceBuilder
         .query(boolQueryBuilder)
@@ -41,18 +45,23 @@ class CustomPackageRepository(
     val searchRequest = SearchRequest().indices(index).types(type)
         .source(searchSourceBuilder)
     val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
-    val objectMapper = ObjectMapper()
 
-    return response.hits.map { objectMapper.readValue(it.sourceAsString, Package::class.java) }.firstOrNull()
+    if (response.hits.totalHits > 1) {
+      log.info("Multiple Hits!!!!")
+      response.hits.forEach {
+        log.info(it.toString())
+      }
+    }
+
+    return response.hits.map { Json.parse(Package.serializer(), it.sourceAsString) }.firstOrNull()
   }
 
   fun findAll(sort: Sort): List<Package> {
     val searchRequest = SearchRequest().indices(index).types(type)
     val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
-    val objectMapper = ObjectMapper()
 
     return response.hits.map {
-      objectMapper.readValue(it.sourceAsString, Package::class.java)
+      Json.parse(Package.serializer(), it.sourceAsString)
     }.toMutableList()
   }
 
@@ -69,9 +78,8 @@ class CustomPackageRepository(
     val searchRequest = SearchRequest().indices(index).types(type).source(searchSourceBuilder)
     val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
 
-    val objectMapper = ObjectMapper()
     val content = response.hits.map {
-      objectMapper.readValue(it.sourceAsString, Package::class.java)
+      Json.parse(Package.serializer(), it.sourceAsString)
     }
 
     return PageImpl(content, pageable, response.hits.totalHits)
@@ -83,10 +91,9 @@ class CustomPackageRepository(
     val searchRequest = SearchRequest().indices(index).types(type)
     searchRequest.source(searchSourceBuilder)
     val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
-    val objectMapper = ObjectMapper()
 
     return response.hits.map {
-      objectMapper.readValue(it.sourceAsString, Package::class.java)
+      Json.parse(Package.serializer(), it.sourceAsString)
     }
   }
 
@@ -94,8 +101,7 @@ class CustomPackageRepository(
     val response = requestById(id)
 
     return if (response.isExists) {
-      val mapper = ObjectMapper()
-      val result = mapper.readValue(response.sourceAsString, Package::class.java)
+      val result = Json.parse(Package.serializer(), response.sourceAsString)
 
       Optional.of(result)
     } else {
@@ -108,10 +114,9 @@ class CustomPackageRepository(
     searchSourceBuilder.query(MatchQueryBuilder("name", name))
     val searchRequest = SearchRequest().indices(index).types(type).source(searchSourceBuilder)
     val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
-    val objectMapper = ObjectMapper()
 
     return response.hits.map {
-      objectMapper.readValue(it.sourceAsString, Package::class.java)
+      Json.parse(Package.serializer(), it.sourceAsString)
     }
   }
 

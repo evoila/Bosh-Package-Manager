@@ -1,12 +1,15 @@
 package de.evoila.bpm.entities
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class Dependency(
-    @JsonProperty(value = "name")
+    @SerialName(value = "name")
     val name: String,
-    @JsonProperty(value = "version")
+    @SerialName(value = "version")
     val version: String,
-    @JsonProperty(value = "vendor")
+    @SerialName(value = "vendor")
     val vendor: String
 )

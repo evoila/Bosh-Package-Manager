@@ -3,6 +3,7 @@ package de.evoila.bpm.custom.elasticsearch.repositories
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.evoila.bpm.custom.elasticsearch.ElasticSearchRestTemplate
 import de.evoila.bpm.entities.BaseEntity
+import kotlinx.serialization.json.Json
 import org.elasticsearch.action.DocWriteResponse
 import org.elasticsearch.action.delete.DeleteRequest
 import org.elasticsearch.action.get.GetRequest
@@ -20,15 +21,18 @@ abstract class AbstractElasticSearchRepository<T : BaseEntity>(
   abstract val index: String
   val type: String = "_doc"
 
+
+  abstract fun serializeObject(entity: T): String
+
   override fun <S : T> save(entity: S): S {
 
-    val objectMapper = ObjectMapper()
     val indexRequest = IndexRequest()
         .type(type)
         .index(index)
         .id(entity.id)
 
-    val body = objectMapper.writeValueAsString(entity)
+    val body = serializeObject(entity)
+
     indexRequest.source(body, XContentType.JSON)
 
     val indexResponse = elasticSearchRestTemplate.performIndexRequest(indexRequest)
