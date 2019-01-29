@@ -1,33 +1,51 @@
 package de.evoila.bpm.entities
 
-import com.fasterxml.jackson.annotation.JsonProperty
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import java.util.*
 
+@Serializable
 data class Package(
-    @JsonProperty(value = "name")
+    @SerialName(value = "id")
+    override var id: String = UUID.randomUUID().toString(),
+    @SerialName(value = "name")
     val name: String,
-    @JsonProperty(value = "version")
+    @SerialName(value = "name_keyword")
+    val nameKeyword: String = name,
+    @SerialName(value = "version")
     val version: String,
-    @JsonProperty(value = "vendor")
+    @SerialName(value = "version_keyword")
+    val versionKeyword: String = version,
+    @SerialName(value = "vendor")
     val vendor: String,
-    @JsonProperty(value = "s3location")
+    @SerialName(value = "vendor_keyword")
+    val vendorKeyword: String = vendor,
+    @SerialName(value = "s3location")
     val s3location: String,
-    @JsonProperty(value = "uploadDate")
+    @SerialName(value = "s3location_keyword")
+    val s3locationKeyword: String = s3location,
+    @SerialName(value = "upload_date")
     val uploadDate: String,
-    @JsonProperty(value = "files")
+    @SerialName(value = "files")
     val files: List<String>,
-    @JsonProperty("dependencies")
+    @SerialName(value = "dependencies")
     val dependencies: List<Dependency>?,
-    @JsonProperty("accessLevel")
+    @SerialName(value = "access_level")
     val accessLevel: AccessLevel,
-    @JsonProperty(value = "stemcell")
+    @SerialName(value = "access_level_keyword")
+    val accessLevelKeyword: AccessLevel = accessLevel,
+    @SerialName(value = "stemcell")
     val stemcell: Stemcell?,
-    @JsonProperty(value = "signed_with")
-    val signedWith: String?,
-    @JsonProperty(value = "description")
+    @SerialName(value = "signed_with")
+    val signedWith: String,
+    @SerialName(value = "signed_with_keyword")
+    val signedWithKeyword: String = signedWith,
+    @SerialName(value = "description")
     val description: String?
-) : BaseEntity() {
+    ) : BaseEntity() {
 
   fun changeAccessLevel(accessLevel: AccessLevel): Package = Package(
+      id = this.id,
       name = this.name,
       version = this.version,
       vendor = this.vendor,
@@ -39,9 +57,17 @@ data class Package(
       stemcell = this.stemcell,
       signedWith = this.signedWith,
       description = this.description
-  ).also { new -> new.id = this.id }
+  )
 
   enum class AccessLevel {
-    PRIVATE, VENDOR, PUBLIC
+    PRIVATE, VENDOR, PUBLIC;
+
+    fun isAbove(accessLevel: AccessLevel): Boolean {
+      return when (this) {
+        PUBLIC -> false
+        VENDOR -> accessLevel == PUBLIC
+        PRIVATE -> accessLevel == VENDOR || accessLevel == PUBLIC
+      }
+    }
   }
 }

@@ -3,6 +3,7 @@ package de.evoila.bpm.custom.elasticsearch.repositories
 import com.fasterxml.jackson.databind.ObjectMapper
 import de.evoila.bpm.custom.elasticsearch.ElasticSearchRestTemplate
 import de.evoila.bpm.entities.Vendor
+import kotlinx.serialization.json.Json
 import org.elasticsearch.action.search.SearchRequest
 import org.elasticsearch.index.query.MatchQueryBuilder
 import org.elasticsearch.index.query.QueryBuilders
@@ -16,6 +17,10 @@ class CustomVendorRepository(
     elasticSearchRestTemplate: ElasticSearchRestTemplate
 ) : AbstractElasticSearchRepository<Vendor>(elasticSearchRestTemplate) {
 
+  override fun serializeObject(entity: Vendor): String {
+    return Json.stringify(Vendor.serializer(), entity)
+  }
+
   override val index: String = "vendors"
 
   override fun findAll(): List<Vendor> {
@@ -24,10 +29,9 @@ class CustomVendorRepository(
     val searchRequest = SearchRequest(index, type)
     searchRequest.source(searchSourceBuilder)
     val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
-    val objectMapper = ObjectMapper()
 
     return response.hits.map {
-      objectMapper.readValue(it.sourceAsString, Vendor::class.java)
+      Json.parse(Vendor.serializer(), it.sourceAsString)
     }
   }
 
@@ -35,8 +39,7 @@ class CustomVendorRepository(
     val response = requestById(id)
 
     return if (response.isExists) {
-      val mapper = ObjectMapper()
-      val result = mapper.readValue(response.sourceAsString, Vendor::class.java)
+      val result = Json.parse(Vendor.serializer(), response.sourceAsString)
 
       Optional.of(result)
     } else {
@@ -51,9 +54,8 @@ class CustomVendorRepository(
 
     val searchRequest = SearchRequest().indices(index).types(type).source(searchSourceBuilder)
     val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
-    val objectMapper = ObjectMapper()
 
-    return response.hits.map { objectMapper.readValue(it.sourceAsString, Vendor::class.java) }.firstOrNull()
+    return response.hits.map { Json.parse(Vendor.serializer(), it.sourceAsString) }.firstOrNull()
   }
 
   companion object {
