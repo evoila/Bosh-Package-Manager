@@ -42,7 +42,7 @@ data class Package(
     val signedWithKeyword: String = signedWith,
     @SerialName(value = "description")
     val description: String?
-    ) : BaseEntity() {
+) : BaseEntity() {
 
   fun changeAccessLevel(accessLevel: AccessLevel): Package = Package(
       id = this.id,
