@@ -1,9 +1,8 @@
 package de.evoila.bpm.custom.elasticsearch.repositories
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import de.evoila.bpm.custom.elasticsearch.ElasticSearchRestTemplate
+
 import de.evoila.bpm.entities.BaseEntity
-import kotlinx.serialization.json.Json
 import org.elasticsearch.action.DocWriteResponse
 import org.elasticsearch.action.delete.DeleteRequest
 import org.elasticsearch.action.get.GetRequest
@@ -12,19 +11,23 @@ import org.elasticsearch.action.index.IndexRequest
 import org.elasticsearch.action.search.SearchRequest
 import org.elasticsearch.common.xcontent.XContentType
 import org.slf4j.LoggerFactory
-import org.springframework.data.repository.CrudRepository
+import org.springframework.data.domain.Sort
+import org.springframework.stereotype.Repository
+import java.util.*
 
+@Repository
 abstract class AbstractElasticSearchRepository<T : BaseEntity>(
     val elasticSearchRestTemplate: ElasticSearchRestTemplate
-) : CrudRepository<T, String> {
+) {
 
   abstract val index: String
-  val type: String = "_doc"
 
 
   abstract fun serializeObject(entity: T): String
 
-  override fun <S : T> save(entity: S): S {
+  abstract fun findById(id: String): Optional<T>
+
+  fun save(entity: T): T {
 
     val indexRequest = IndexRequest()
         .type(type)
@@ -43,39 +46,40 @@ abstract class AbstractElasticSearchRepository<T : BaseEntity>(
     return entity
   }
 
-  override fun <S : T> saveAll(entities: Iterable<S>): List<S> {
+  fun saveAll(entities: Iterable<T>): List<T> {
     return entities.map {
       save(it)
       return@map it
     }
   }
 
-  override fun findAllById(ids: MutableIterable<String>): List<T> {
+
+  fun findAllById(ids: MutableIterable<String>): List<T> {
     return ids.map { id ->
       return@map findById(id).get()
     }.toMutableList()
   }
 
-  override fun existsById(id: String): Boolean {
+  fun existsById(id: String): Boolean {
     val response = requestById(id)
 
     return response.isExists
   }
 
-  override fun deleteById(id: String) {
+  fun deleteById(id: String) {
     val deleteRequest = DeleteRequest(index, type, id)
     elasticSearchRestTemplate.performDeleteRequest(deleteRequest)
   }
 
-  override fun delete(entity: T) {
+  fun delete(entity: T) {
     deleteById(entity.id)
   }
 
-  override fun deleteAll() {
+  fun deleteAll() {
     log.info("Not implemented as it is not meant to be ever used.")
   }
 
-  override fun deleteAll(entities: Iterable<T>) {
+  fun deleteAll(entities: Iterable<T>) {
     entities.forEach {
       deleteById(it.id)
     }
@@ -87,7 +91,7 @@ abstract class AbstractElasticSearchRepository<T : BaseEntity>(
     return elasticSearchRestTemplate.performGetRequest(request)
   }
 
-  override fun count(): Long {
+  fun count(): Long {
     val searchRequest = SearchRequest().indices(index).types(type)
     val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
 
@@ -96,5 +100,6 @@ abstract class AbstractElasticSearchRepository<T : BaseEntity>(
 
   companion object {
     private val log = LoggerFactory.getLogger(AbstractElasticSearchRepository::class.java)
+    const val type: String = "_doc"
   }
 }
