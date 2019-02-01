@@ -58,7 +58,7 @@ class CliClientPackageController(
     }
 
     if (packageBody.name.isEmpty() || packageBody.vendor.isEmpty() || packageBody.version.isEmpty()) {
-      return ResponseEntity.badRequest().body("A package needs a name, version and a resisted vendor.")
+      return ResponseEntity.badRequest().body("A package needs a name, version and a registered vendor.")
     }
 
     if (!force) {
