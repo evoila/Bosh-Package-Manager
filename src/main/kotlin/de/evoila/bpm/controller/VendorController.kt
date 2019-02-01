@@ -49,6 +49,14 @@ class VendorController(
     ResponseEntity.badRequest().body(e.message)
   }
 
+  @GetMapping(value = ["vendors/member-of"])
+  fun memberOf(principal: Principal?): ResponseEntity<Any> =
+      principal?.let {
+        val vendors = vendorService.vendorsForUsers(principal.name)
+        ResponseEntity.ok<Any>(vendors)
+      } ?: ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
+
+
   companion object {
     val log: Logger = LoggerFactory.getLogger(VendorController::class.java)
   }
