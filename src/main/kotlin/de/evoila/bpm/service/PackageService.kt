@@ -64,7 +64,9 @@ class PackageService(
         stemcell = packageBody.stemcell,
         accessLevel = PRIVATE,
         signedWith = signingKey,
-        description = packageBody.description
+        description = packageBody.description,
+        size = 0,
+        url = packageBody.url
     ))
 
     return s3location
@@ -88,9 +90,10 @@ class PackageService(
     }
   }
 
-  fun savePendingPackage(key: String) {
+  fun savePendingPackage(key: String, size: Long) {
     val packageToSave = pendingPackages.remove(key)
         ?: throw PackageNotFoundException("The Package does not exist.")
+    packageToSave.size = size
 
     customPackageRepository.save(packageToSave)
     log.info("Save package: $packageToSave")
