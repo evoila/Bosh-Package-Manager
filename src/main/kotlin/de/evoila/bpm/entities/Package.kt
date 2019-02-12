@@ -2,6 +2,7 @@ package de.evoila.bpm.entities
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.net.URL
 import java.util.*
 
 @Serializable
@@ -10,20 +11,12 @@ data class Package(
     override var id: String = UUID.randomUUID().toString(),
     @SerialName(value = "name")
     val name: String,
-    @SerialName(value = "name_keyword")
-    val nameKeyword: String = name,
     @SerialName(value = "version")
     val version: String,
-    @SerialName(value = "version_keyword")
-    val versionKeyword: String = version,
     @SerialName(value = "vendor")
     val vendor: String,
-    @SerialName(value = "vendor_keyword")
-    val vendorKeyword: String = vendor,
-    @SerialName(value = "s3location")
+    @SerialName(value = "s3_location")
     val s3location: String,
-    @SerialName(value = "s3location_keyword")
-    val s3locationKeyword: String = s3location,
     @SerialName(value = "upload_date")
     val uploadDate: String,
     @SerialName(value = "files")
@@ -32,16 +25,16 @@ data class Package(
     val dependencies: List<Dependency>?,
     @SerialName(value = "access_level")
     val accessLevel: AccessLevel,
-    @SerialName(value = "access_level_keyword")
-    val accessLevelKeyword: AccessLevel = accessLevel,
     @SerialName(value = "stemcell")
     val stemcell: Stemcell?,
     @SerialName(value = "signed_with")
     val signedWith: String,
-    @SerialName(value = "signed_with_keyword")
-    val signedWithKeyword: String = signedWith,
     @SerialName(value = "description")
-    val description: String?
+    val description: String?,
+    @SerialName(value = "size")
+    var size: Long?,
+    var url: String?
+
 ) : BaseEntity() {
 
   fun changeAccessLevel(accessLevel: AccessLevel): Package = Package(
@@ -56,7 +49,9 @@ data class Package(
       accessLevel = accessLevel,
       stemcell = this.stemcell,
       signedWith = this.signedWith,
-      description = this.description
+      description = this.description,
+      size = this.size,
+      url = this.url
   )
 
   enum class AccessLevel {

@@ -32,11 +32,11 @@ class CustomPackageRepository(
 
   fun findByVendorAndNameAndVersion(vendor: String, name: String, version: String): Package? {
 
-    val searchSourceBuilder = SearchSourceBuilder()
+        val searchSourceBuilder = SearchSourceBuilder()
     val boolQueryBuilder = BoolQueryBuilder()
-    boolQueryBuilder.must(MatchQueryBuilder("vendor_keyword", vendor))
-    boolQueryBuilder.must(MatchQueryBuilder("name_keyword", name))
-    boolQueryBuilder.must(MatchQueryBuilder("version_keyword", version))
+    boolQueryBuilder.must(MatchQueryBuilder("vendor.keyword", vendor))
+    boolQueryBuilder.must(MatchQueryBuilder("name.keyword", name))
+    boolQueryBuilder.must(MatchQueryBuilder("version.keyword", version))
     searchSourceBuilder.query(boolQueryBuilder).size(1)
 
     val searchRequest = SearchRequest().indices(index).types(type)
@@ -58,9 +58,9 @@ class CustomPackageRepository(
 
     val searchSourceBuilder = SearchSourceBuilder()
     val boolQueryBuilder = BoolQueryBuilder()
-    boolQueryBuilder.must(MatchQueryBuilder("vendor_keyword", vendor))
-    boolQueryBuilder.must(MatchQueryBuilder("name_keyword", name))
-    boolQueryBuilder.must(MatchQueryBuilder("version_keyword", version))
+    boolQueryBuilder.must(MatchQueryBuilder("vendor.keyword", vendor))
+    boolQueryBuilder.must(MatchQueryBuilder("name.keyword", name))
+    boolQueryBuilder.must(MatchQueryBuilder("version.keyword", version))
     boolQueryBuilder.must(buildAccessQuery(username))
 
     searchSourceBuilder.query(boolQueryBuilder).size(1)
@@ -136,7 +136,7 @@ class CustomPackageRepository(
 
   private fun buildAccessQuery(username: String?): BoolQueryBuilder {
     val accessQuery = BoolQueryBuilder()
-    accessQuery.should(MatchQueryBuilder("access_level_keyword", "PUBLIC"))
+    accessQuery.should(MatchQueryBuilder("access_level.keyword", "PUBLIC"))
 
     username?.let {
       accessQuery.should(buildPrivate(it))
@@ -147,8 +147,8 @@ class CustomPackageRepository(
 
   fun buildPrivate(username: String): BoolQueryBuilder {
     val privateQuery = BoolQueryBuilder()
-    privateQuery.must(MatchQueryBuilder("access_level_keyword", "PRIVATE"))
-    privateQuery.must(MatchQueryBuilder("signed_with_keyword", username))
+    privateQuery.must(MatchQueryBuilder("access_level.keyword", "PRIVATE"))
+    privateQuery.must(MatchQueryBuilder("signed_with.keyword", username))
 
     return privateQuery
   }
@@ -156,9 +156,9 @@ class CustomPackageRepository(
   fun buildVendor(username: String): BoolQueryBuilder {
     val vendors = vendorRepository.memberOfByName(username)
     val fullVendorQuery = BoolQueryBuilder()
-    fullVendorQuery.must(MatchQueryBuilder("access_level_keyword", "VENDOR"))
+    fullVendorQuery.must(MatchQueryBuilder("access_level.keyword", "VENDOR"))
     val vendorQuery = BoolQueryBuilder()
-    vendors.forEach { vendorQuery.should(MatchQueryBuilder("vendor_keyword", it.name)) }
+    vendors.forEach { vendorQuery.should(MatchQueryBuilder("vendor.keyword", it.name)) }
     fullVendorQuery.must(vendorQuery)
 
     return fullVendorQuery

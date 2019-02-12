@@ -85,8 +85,8 @@ class CliClientPackageController(
   }
 
   @PutMapping(value = ["package"])
-  fun uploadPackage(@RequestParam("location") key: String): ResponseEntity<Any> = try {
-    packageService.savePendingPackage(key)
+  fun uploadPackage(@RequestParam("location") key: String, @RequestParam("size") size: Long): ResponseEntity<Any> = try {
+    packageService.savePendingPackage(key, size)
 
     ResponseEntity.ok().build()
   } catch (e: PackageNotFoundException) {
