@@ -6,7 +6,6 @@ import de.evoila.bpm.entities.Package.AccessLevel.*
 import de.evoila.bpm.exceptions.PackageNotFoundException
 import de.evoila.bpm.helpers.PendingPackages
 import de.evoila.bpm.rest.bodies.PackageBody
-import de.evoila.bpm.security.filter.PackageAccessFilter
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -18,29 +17,22 @@ import java.util.*
 
 @Service
 class PackageService(
-    val customPackageRepository: CustomPackageRepository,
-    val packageAccessFilter: PackageAccessFilter
+    val customPackageRepository: CustomPackageRepository
 ) {
 
   fun getAllPackages(username: String?, pageable: Pageable): Page<Package> =
-      packageAccessFilter.filterPackageList(username, customPackageRepository.findAll(pageable))
+      customPackageRepository.findAll(pageable, username)
 
   fun getPackagesByName(username: String?, packageName: String): List<Package> =
-      packageAccessFilter.filterPackageList(username, customPackageRepository.getPackagesByName(packageName))
+      customPackageRepository.getPackagesByName(packageName, username)
 
   fun findById(id: String): Package? = customPackageRepository.findById(id).orElseGet { null }
 
   @Throws(PackageNotFoundException::class)
   fun accessPackage(vendor: String, name: String, version: String, username: String?): Package {
 
-    val pack = customPackageRepository.findByVendorAndNameAndVersion(vendor, name, version)
+    return customPackageRepository.findByVendorAndNameAndVersion(vendor, name, version, username)
         ?: throw PackageNotFoundException("didn't not find a package with vendor : $vendor , name : $name:$version")
-
-    if (!packageAccessFilter.checkAccessToSinglePackage(username, pack)) {
-      throw  IllegalAccessError("User has no access to this package")
-    }
-
-    return pack
   }
 
   fun checkIfPresent(packageBody: PackageBody): Package? {
@@ -72,7 +64,9 @@ class PackageService(
         stemcell = packageBody.stemcell,
         accessLevel = PRIVATE,
         signedWith = signingKey,
-        description = packageBody.description
+        description = packageBody.description,
+        size = 0,
+        url = packageBody.url
     ))
 
     return s3location
@@ -96,9 +90,10 @@ class PackageService(
     }
   }
 
-  fun savePendingPackage(key: String) {
+  fun savePendingPackage(key: String, size: Long) {
     val packageToSave = pendingPackages.remove(key)
         ?: throw PackageNotFoundException("The Package does not exist.")
+    packageToSave.size = size
 
     customPackageRepository.save(packageToSave)
     log.info("Save package: $packageToSave")

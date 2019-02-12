@@ -58,7 +58,7 @@ class CliClientPackageController(
     }
 
     if (packageBody.name.isEmpty() || packageBody.vendor.isEmpty() || packageBody.version.isEmpty()) {
-      return ResponseEntity.badRequest().body("A package needs a name, version and a resisted vendor.")
+      return ResponseEntity.badRequest().body("A package needs a name, version and a registered vendor.")
     }
 
     if (!force) {
@@ -85,8 +85,8 @@ class CliClientPackageController(
   }
 
   @PutMapping(value = ["package"])
-  fun uploadPackage(@RequestParam("location") key: String): ResponseEntity<Any> = try {
-    packageService.savePendingPackage(key)
+  fun uploadPackage(@RequestParam("location") key: String, @RequestParam("size") size: Long): ResponseEntity<Any> = try {
+    packageService.savePendingPackage(key, size)
 
     ResponseEntity.ok().build()
   } catch (e: PackageNotFoundException) {

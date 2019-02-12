@@ -27,7 +27,8 @@ class VendorService(
   }
 
   fun addMemberToVendor(admin: String, vendorName: String, email: String) {
-    val user = userRepository.findByEmail(email) ?: throw UserNotFoundException("No user could be found for this email.")
+    val user = userRepository.findByEmail(email)
+        ?: throw UserNotFoundException("No user could be found for this email.")
     val vendor = customVendorRepository.findByName(vendorName)
         ?: throw VendorNotFoundException("The vendor could not be found")
 
@@ -38,5 +39,9 @@ class VendorService(
     } else {
       throw UnauthorizedException("User is not a member of $vendorName")
     }
+  }
+
+  fun vendorsForUsers(name: String): List<Vendor> {
+    return customVendorRepository.memberOfByName(name)
   }
 }

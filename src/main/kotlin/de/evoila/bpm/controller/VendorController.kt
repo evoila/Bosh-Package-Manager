@@ -6,10 +6,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.PatchMapping
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 import java.security.Principal
 
 @RestController
@@ -51,6 +48,14 @@ class VendorController(
 
     ResponseEntity.badRequest().body(e.message)
   }
+
+  @GetMapping(value = ["vendors/member-of"])
+  fun memberOf(principal: Principal?): ResponseEntity<Any> =
+      principal?.let {
+        val vendors = vendorService.vendorsForUsers(principal.name)
+        ResponseEntity.ok<Any>(vendors)
+      } ?: ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
+
 
   companion object {
     val log: Logger = LoggerFactory.getLogger(VendorController::class.java)

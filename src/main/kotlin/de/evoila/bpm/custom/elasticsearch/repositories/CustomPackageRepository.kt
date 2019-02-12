@@ -12,13 +12,13 @@ import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
-import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Repository
 import java.util.*
 
 @Repository
 class CustomPackageRepository(
-    elasticSearchRestTemplate: ElasticSearchRestTemplate
+    elasticSearchRestTemplate: ElasticSearchRestTemplate,
+    val vendorRepository: CustomVendorRepository
 ) : AbstractElasticSearchRepository<Package>(
     elasticSearchRestTemplate
 ) {
@@ -32,15 +32,12 @@ class CustomPackageRepository(
 
   fun findByVendorAndNameAndVersion(vendor: String, name: String, version: String): Package? {
 
-    val searchSourceBuilder = SearchSourceBuilder()
+        val searchSourceBuilder = SearchSourceBuilder()
     val boolQueryBuilder = BoolQueryBuilder()
-    boolQueryBuilder.filter(MatchQueryBuilder("vendor_keyword", vendor).operator(Operator.AND))
-    boolQueryBuilder.filter(MatchQueryBuilder("name_keyword", name).operator(Operator.AND))
-    boolQueryBuilder.filter(MatchQueryBuilder("version_keyword", version).operator(Operator.AND))
-
-    searchSourceBuilder
-        .query(boolQueryBuilder)
-        .size(1)
+    boolQueryBuilder.must(MatchQueryBuilder("vendor.keyword", vendor))
+    boolQueryBuilder.must(MatchQueryBuilder("name.keyword", name))
+    boolQueryBuilder.must(MatchQueryBuilder("version.keyword", version))
+    searchSourceBuilder.query(boolQueryBuilder).size(1)
 
     val searchRequest = SearchRequest().indices(index).types(type)
         .source(searchSourceBuilder)
@@ -56,19 +53,39 @@ class CustomPackageRepository(
     return response.hits.map { Json.parse(Package.serializer(), it.sourceAsString) }.firstOrNull()
   }
 
-  fun findAll(sort: Sort): List<Package> {
+
+  fun findByVendorAndNameAndVersion(vendor: String, name: String, version: String, username: String?): Package? {
+
+    val searchSourceBuilder = SearchSourceBuilder()
+    val boolQueryBuilder = BoolQueryBuilder()
+    boolQueryBuilder.must(MatchQueryBuilder("vendor.keyword", vendor))
+    boolQueryBuilder.must(MatchQueryBuilder("name.keyword", name))
+    boolQueryBuilder.must(MatchQueryBuilder("version.keyword", version))
+    boolQueryBuilder.must(buildAccessQuery(username))
+
+    searchSourceBuilder.query(boolQueryBuilder).size(1)
+
+
     val searchRequest = SearchRequest().indices(index).types(type)
+        .source(searchSourceBuilder)
     val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
 
-    return response.hits.map {
-      Json.parse(Package.serializer(), it.sourceAsString)
-    }.toMutableList()
+    if (response.hits.totalHits > 1) {
+      log.info("Multiple Hits!!!!")
+      response.hits.forEach {
+        log.info(it.toString())
+      }
+    }
+
+    return response.hits.map { Json.parse(Package.serializer(), it.sourceAsString) }.firstOrNull()
   }
 
-  fun findAll(pageable: Pageable): Page<Package> {
+  fun findAll(pageable: Pageable, username: String?): Page<Package> {
     val searchSourceBuilder = SearchSourceBuilder()
         .from(pageable.pageNumber)
         .size(pageable.pageSize)
+
+    searchSourceBuilder.query(BoolQueryBuilder().must(buildAccessQuery(username)))
 
     pageable.sort.forEach {
       searchSourceBuilder.sort(FieldSortBuilder(it.property)
@@ -85,18 +102,6 @@ class CustomPackageRepository(
     return PageImpl(content, pageable, response.hits.totalHits)
   }
 
-  override fun findAll(): List<Package> {
-    val searchSourceBuilder = SearchSourceBuilder()
-    searchSourceBuilder.query(QueryBuilders.matchAllQuery())
-    val searchRequest = SearchRequest().indices(index).types(type)
-    searchRequest.source(searchSourceBuilder)
-    val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
-
-    return response.hits.map {
-      Json.parse(Package.serializer(), it.sourceAsString)
-    }
-  }
-
   override fun findById(id: String): Optional<Package> {
     val response = requestById(id)
 
@@ -109,15 +114,54 @@ class CustomPackageRepository(
     }
   }
 
-  fun getPackagesByName(name: String): List<Package> {
-    val searchSourceBuilder = SearchSourceBuilder()
-    searchSourceBuilder.query(MatchQueryBuilder("name", name))
-    val searchRequest = SearchRequest().indices(index).types(type).source(searchSourceBuilder)
-    val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
+  fun getPackagesByName(name: String, username: String?): List<Package> {
+
+    val searchPublicSourceBuilder = SearchSourceBuilder()
+    val boolQueryBuilder = BoolQueryBuilder()
+    boolQueryBuilder.must(MatchQueryBuilder("name", name))
+    searchPublicSourceBuilder.query(boolQueryBuilder)
+    boolQueryBuilder.must(buildAccessQuery(username))
+
+    val response = elasticSearchRestTemplate.performSearchRequest(
+        SearchRequest()
+            .indices(index)
+            .types(type)
+            .source(searchPublicSourceBuilder)
+    )
 
     return response.hits.map {
       Json.parse(Package.serializer(), it.sourceAsString)
     }
+  }
+
+  private fun buildAccessQuery(username: String?): BoolQueryBuilder {
+    val accessQuery = BoolQueryBuilder()
+    accessQuery.should(MatchQueryBuilder("access_level.keyword", "PUBLIC"))
+
+    username?.let {
+      accessQuery.should(buildPrivate(it))
+      accessQuery.should(buildVendor(it))
+    }
+    return accessQuery
+  }
+
+  fun buildPrivate(username: String): BoolQueryBuilder {
+    val privateQuery = BoolQueryBuilder()
+    privateQuery.must(MatchQueryBuilder("access_level.keyword", "PRIVATE"))
+    privateQuery.must(MatchQueryBuilder("signed_with.keyword", username))
+
+    return privateQuery
+  }
+
+  fun buildVendor(username: String): BoolQueryBuilder {
+    val vendors = vendorRepository.memberOfByName(username)
+    val fullVendorQuery = BoolQueryBuilder()
+    fullVendorQuery.must(MatchQueryBuilder("access_level.keyword", "VENDOR"))
+    val vendorQuery = BoolQueryBuilder()
+    vendors.forEach { vendorQuery.should(MatchQueryBuilder("vendor.keyword", it.name)) }
+    fullVendorQuery.must(vendorQuery)
+
+    return fullVendorQuery
   }
 
   companion object {
