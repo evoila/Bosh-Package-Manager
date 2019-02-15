@@ -17,38 +17,40 @@ import java.util.*
 
 @Service
 class PackageService(
-    val customPackageRepository: CustomPackageRepository
+    val packageRepository: CustomPackageRepository,
+    val amazonS3Service: AmazonS3Service
 ) {
 
   fun getAllPackages(username: String?, pageable: Pageable): Page<Package> =
-      customPackageRepository.findAll(pageable, username)
+      packageRepository.findAll(pageable, username)
 
   fun getPackagesByName(username: String?, packageName: String): List<Package> =
-      customPackageRepository.getPackagesByName(packageName, username)
+      packageRepository.getPackagesByName(packageName, username)
 
-  fun findById(id: String): Package? = customPackageRepository.findById(id).orElseGet { null }
+  fun findById(id: String): Package? = packageRepository.findById(id).orElseGet { null }
 
   @Throws(PackageNotFoundException::class)
   fun accessPackage(vendor: String, name: String, version: String, username: String?): Package {
 
-    return customPackageRepository.findByVendorAndNameAndVersion(vendor, name, version, username)
+    return packageRepository.findByVendorAndNameAndVersion(vendor, name, version, username)
         ?: throw PackageNotFoundException("didn't not find a package with vendor : $vendor , name : $name:$version")
   }
 
   fun checkIfPresent(packageBody: PackageBody): Package? {
-    return customPackageRepository.findByVendorAndNameAndVersion(packageBody.vendor, packageBody.name, packageBody.version)
+    return packageRepository.findByVendorAndNameAndVersion(packageBody.vendor, packageBody.name, packageBody.version)
   }
 
   fun putPendingPackage(packageBody: PackageBody, signingKey: String
   ): String {
     log.info("Pending package: $packageBody")
 
-    customPackageRepository.findByVendorAndNameAndVersion(
+    packageRepository.findByVendorAndNameAndVersion(
         vendor = packageBody.vendor,
         name = packageBody.name,
         version = packageBody.version)?.let {
-      customPackageRepository.deleteById(it.id)
-      //   TODO delete outdated file in the S3 bucket !!
+
+      packageRepository.deleteById(it.id)
+      amazonS3Service.deleteObject(it.s3location)
     }
 
     val s3location = "${UUID.randomUUID()}.bpm"
@@ -73,13 +75,13 @@ class PackageService(
   }
 
   fun alterAccessLevel(id: String, username: String, accessLevel: Package.AccessLevel) {
-    val pack = customPackageRepository.findById(id)
+    val pack = packageRepository.findById(id)
         .orElseThrow { PackageNotFoundException("Did not find a package for the given id") }
     alterAccessLevel(username, accessLevel, pack)
   }
 
   fun alterAccessLevel(username: String, accessLevel: Package.AccessLevel, pack: Package) {
-    customPackageRepository.save(pack.changeAccessLevel(accessLevel))
+    packageRepository.save(pack.changeAccessLevel(accessLevel))
 
     pack.dependencies?.forEach {
       val dependency = accessPackage(it.vendor, it.name, it.version, username)
@@ -90,12 +92,20 @@ class PackageService(
     }
   }
 
+  fun deletePackageIfAllowed(vendor: String, name: String, version: String) {
+    val pack = packageRepository.findByVendorAndNameAndVersion(vendor, name, version)
+    pack?.let {
+      packageRepository.deleteById(it.id)
+      amazonS3Service.deleteObject(it.s3location)
+    } ?: throw PackageNotFoundException("the package does not exist.")
+  }
+
   fun savePendingPackage(key: String, size: Long) {
     val packageToSave = pendingPackages.remove(key)
         ?: throw PackageNotFoundException("The Package does not exist.")
     packageToSave.size = size
 
-    customPackageRepository.save(packageToSave)
+    packageRepository.save(packageToSave)
     log.info("Save package: $packageToSave")
   }
 

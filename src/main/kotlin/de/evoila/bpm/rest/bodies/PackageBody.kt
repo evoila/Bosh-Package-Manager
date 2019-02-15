@@ -3,6 +3,7 @@ package de.evoila.bpm.rest.bodies
 import com.fasterxml.jackson.annotation.JsonProperty
 import de.evoila.bpm.entities.Dependency
 import de.evoila.bpm.entities.Stemcell
+import java.io.Serializable
 import java.net.URL
 
 data class PackageBody(
@@ -22,4 +23,4 @@ data class PackageBody(
     val description: String?,
     @JsonProperty("url")
     val url: String?
-)
+) : Serializable

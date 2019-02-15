@@ -5,6 +5,8 @@ import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
 import com.amazonaws.services.securitytoken.model.Credentials
 import com.amazonaws.services.securitytoken.model.GetSessionTokenRequest
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+
 import de.evoila.bpm.config.S3Config
 import org.springframework.stereotype.Service
 
@@ -41,6 +43,16 @@ class AmazonS3Service(
       BasicAWSCredentials(it.authKey, it.authSecret)
     }
         ?: throw NoSuchElementException("The needed credentials have not been found. Please specify them in the config yml.")
+  }
+
+  fun deleteObject(s3location: String) {
+
+    val s3Client = AmazonS3ClientBuilder.standard()
+        .withCredentials(AWSStaticCredentialsProvider(makeCreds(Operation.UPLOAD)))
+        .withRegion(s3Config.region)
+        .build()
+
+    s3Client.deleteObject(s3Config.bucket, s3location)
   }
 
   enum class Operation {
