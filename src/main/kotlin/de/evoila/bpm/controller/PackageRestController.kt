@@ -3,6 +3,7 @@ package de.evoila.bpm.controller
 import de.evoila.bpm.entities.Package
 import de.evoila.bpm.exceptions.PackageNotFoundException
 import de.evoila.bpm.service.PackageService
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PagedResourcesAssembler
@@ -25,19 +26,18 @@ class PackageRestController(
 ) {
 
   @GetMapping(value = ["/rest/packages"])
-  fun getAllPaginated(pageable: Pageable, assembler: PagedResourcesAssembler<Package>, principal: Principal?): ResponseEntity<PagedResources<Resource<Package>>> {
+  fun getAllPaginated(pageable: Pageable,
+                      assembler: PagedResourcesAssembler<Package>,
+                      principal: Principal?
+  ): ResponseEntity<PagedResources<Resource<Package>>> {
 
     val page = packageService.getAllPackages(principal?.name, pageable)
-
-    // Works until now without this
-    //   val pr = assembler.toResource(page,
-    //       linkTo(PackageRestController::class.java).slash("/rest/packages").withSelfRel())
     val responseHeaders = HttpHeaders()
-    //  responseHeaders.add("Link", createLinkHeader(pr))
-
 
     return ResponseEntity(assembler.toResource(page, linkTo(PackageRestController::class.java).slash("/products").withSelfRel()), responseHeaders, HttpStatus.OK)
   }
+
+
 
   private fun createLinkHeader(pagedResource: PagedResources<Resource<Package>>): String {
 
@@ -50,28 +50,11 @@ class PackageRestController(
     return linkHeader.toString()
   }
 
-  @GetMapping("/rest/packages/search")
-  fun searchPackageByVendorNameVersion(
-      @RequestParam(value = "vendor") vendor: String,
-      @RequestParam(value = "name") name: String,
-      @RequestParam(value = "version") version: String,
-      principal: Principal?): ResponseEntity<Any> = try {
-
-    val packageBody = packageService.accessPackage(vendor, name, version, principal?.name)
-
-    log.info("Exposing package information for '$name:$version by $vendor'")
-
-    ResponseEntity.ok(packageBody)
-  } catch (e: PackageNotFoundException) {
-    ResponseEntity.notFound().build()
-  }
-
-
   fun buildLinkHeader(uri: String, rel: String): String {
     return "<$uri>; rel=\"$rel\""
   }
 
   companion object {
-    val log = LoggerFactory.getLogger(PackageRestController::class.java)
+    private val log: Logger = LoggerFactory.getLogger(PackageRestController::class.java)
   }
 }
