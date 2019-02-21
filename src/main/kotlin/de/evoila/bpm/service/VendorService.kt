@@ -44,4 +44,8 @@ class VendorService(
   fun vendorsForUsers(name: String): List<Vendor> {
     return customVendorRepository.memberOfByName(name)
   }
+
+  fun findByName(name: String): Vendor? {
+    return customVendorRepository.findByName(name)
+  }
 }

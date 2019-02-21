@@ -22,15 +22,13 @@ class CustomUserRepository(
 
   override val index: String = "users"
 
-  override fun findById(id: String): Optional<User> {
+  override fun findById(id: String): User? {
     val response = requestById(id)
 
     return if (response.isExists) {
-      val result = Json.parse(User.serializer(), response.sourceAsString)
-
-      Optional.of(result)
+      Json.parse(User.serializer(), response.sourceAsString)
     } else {
-      Optional.empty()
+      null
     }
   }
 

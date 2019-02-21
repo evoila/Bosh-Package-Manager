@@ -25,7 +25,7 @@ abstract class AbstractElasticSearchRepository<T : BaseEntity>(
 
   abstract fun serializeObject(entity: T): String
 
-  abstract fun findById(id: String): Optional<T>
+  abstract fun findById(id: String): T?
 
   fun save(entity: T): T {
 
@@ -56,8 +56,8 @@ abstract class AbstractElasticSearchRepository<T : BaseEntity>(
 
   fun findAllById(ids: MutableIterable<String>): List<T> {
     return ids.map { id ->
-      return@map findById(id).get()
-    }.toMutableList()
+      findById(id)
+    }.requireNoNulls()
   }
 
   fun existsById(id: String): Boolean {
@@ -101,5 +101,6 @@ abstract class AbstractElasticSearchRepository<T : BaseEntity>(
   companion object {
     private val log = LoggerFactory.getLogger(AbstractElasticSearchRepository::class.java)
     const val type: String = "_doc"
+    const val KEYWORD = ".keyword"
   }
 }

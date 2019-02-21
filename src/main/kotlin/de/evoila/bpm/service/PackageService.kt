@@ -24,10 +24,13 @@ class PackageService(
   fun getAllPackages(username: String?, pageable: Pageable): Page<Package> =
       packageRepository.findAll(pageable, username)
 
-  fun getPackagesByName(username: String?, packageName: String): List<Package> =
-      packageRepository.getPackagesByName(packageName, username)
+  fun getPackagesByVendor(username: String?, pageable: Pageable, vendor: String): Page<Package> =
+      packageRepository.searchByVendor(pageable, username, vendor)
 
-  fun findById(id: String): Package? = packageRepository.findById(id).orElseGet { null }
+  fun getPackagesByName(username: String?, packageName: String): List<Package> =
+      packageRepository.searchPackagesByName(packageName, username)
+
+  fun findById(id: String): Package? = packageRepository.findById(id)
 
   @Throws(PackageNotFoundException::class)
   fun accessPackage(vendor: String, name: String, version: String, username: String?): Package {
@@ -76,7 +79,7 @@ class PackageService(
 
   fun alterAccessLevel(id: String, username: String, accessLevel: Package.AccessLevel) {
     val pack = packageRepository.findById(id)
-        .orElseThrow { PackageNotFoundException("Did not find a package for the given id") }
+        ?: throw PackageNotFoundException("Did not find a package for the given id")
     alterAccessLevel(username, accessLevel, pack)
   }
 

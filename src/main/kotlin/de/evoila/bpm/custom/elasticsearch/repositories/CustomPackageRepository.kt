@@ -94,18 +94,17 @@ class CustomPackageRepository(
     return PageImpl(content, pageable, response.hits.totalHits)
   }
 
-  override fun findById(id: String): Optional<Package> {
+  override fun findById(id: String): Package? {
     val response = requestById(id)
 
     return if (response.isExists) {
-      val result = Json.parse(Package.serializer(), response.sourceAsString)
-      Optional.of(result)
+      Json.parse(Package.serializer(), response.sourceAsString)
     } else {
-      Optional.empty()
+      null
     }
   }
 
-  fun getPackagesByName(name: String, username: String?): List<Package> {
+  fun searchPackagesByName(name: String, username: String?): List<Package> {
     val searchPublicSourceBuilder = SearchSourceBuilder()
     val boolQueryBuilder = BoolQueryBuilder()
     boolQueryBuilder.must(MatchQueryBuilder(FIELD_NAME, name))
@@ -121,6 +120,31 @@ class CustomPackageRepository(
     return response.hits.map {
       Json.parse(Package.serializer(), it.sourceAsString)
     }
+  }
+
+  fun searchByVendor(pageable: Pageable, username: String?, vendor: String): Page<Package> {
+    val searchSourceBuilder = SearchSourceBuilder()
+        .from(pageable.pageNumber)
+        .size(pageable.pageSize)
+    pageable.sort.forEach {
+      searchSourceBuilder.sort(FieldSortBuilder(it.property)
+          .order(SortOrder.fromString(it.direction.name)))
+    }
+    val boolQueryBuilder = BoolQueryBuilder()
+    boolQueryBuilder.must(MatchQueryBuilder(FIELD_VENDOR, vendor))
+    searchSourceBuilder.query(boolQueryBuilder)
+    boolQueryBuilder.must(buildAccessQuery(username))
+    val response = elasticSearchRestTemplate.performSearchRequest(
+        SearchRequest()
+            .indices(index)
+            .types(type)
+            .source(searchSourceBuilder))
+
+    val content = response.hits.map {
+      Json.parse(Package.serializer(), it.sourceAsString)
+    }
+
+    return PageImpl(content, pageable, response.hits.totalHits)
   }
 
   private fun buildAccessQuery(username: String?): BoolQueryBuilder {
@@ -159,7 +183,6 @@ class CustomPackageRepository(
     private const val FIELD_VERSION = "version"
     private const val FIELD_ACCESS_LEVEL = "access_level"
     private const val FIELD_SIGNED_WITH = "signed_with"
-    private const val KEYWORD = ".keyword"
 
     private val log = LoggerFactory.getLogger(CustomPackageRepository::class.java)
   }

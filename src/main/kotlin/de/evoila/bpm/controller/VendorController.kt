@@ -1,5 +1,6 @@
 package de.evoila.bpm.controller
 
+import de.evoila.bpm.entities.Vendor
 import de.evoila.bpm.exceptions.UnauthorizedException
 import de.evoila.bpm.service.VendorService
 import org.slf4j.Logger
@@ -55,6 +56,12 @@ class VendorController(
         val vendors = vendorService.vendorsForUsers(principal.name)
         ResponseEntity.ok<Any>(vendors)
       } ?: ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
+
+  @GetMapping(value = ["vendors"])
+  fun findByName(@RequestParam(value = "name") name: String): ResponseEntity<Vendor> =
+      vendorService.findByName(name)?.let {
+        ResponseEntity.ok(it)
+      } ?: ResponseEntity.notFound().build()
 
 
   companion object {

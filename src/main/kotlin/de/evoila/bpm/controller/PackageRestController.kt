@@ -1,7 +1,6 @@
 package de.evoila.bpm.controller
 
 import de.evoila.bpm.entities.Package
-import de.evoila.bpm.exceptions.PackageNotFoundException
 import de.evoila.bpm.service.PackageService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -13,10 +12,7 @@ import org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.CrossOrigin
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 import java.security.Principal
 
 @CrossOrigin(origins = ["http://localhost:4200"])
@@ -30,28 +26,23 @@ class PackageRestController(
                       assembler: PagedResourcesAssembler<Package>,
                       principal: Principal?
   ): ResponseEntity<PagedResources<Resource<Package>>> {
-
     val page = packageService.getAllPackages(principal?.name, pageable)
     val responseHeaders = HttpHeaders()
 
-    return ResponseEntity(assembler.toResource(page, linkTo(PackageRestController::class.java).slash("/products").withSelfRel()), responseHeaders, HttpStatus.OK)
+    return ResponseEntity(assembler.toResource(page, linkTo(PackageRestController::class.java).slash("/packages").withSelfRel()), responseHeaders, HttpStatus.OK)
   }
 
+  @GetMapping(value = ["/rest/packages/{vendor}"])
+  fun searchByVendor(
+      pageable: Pageable,
+      @PathVariable(value = "vendor") vendor: String,
+      assembler: PagedResourcesAssembler<Package>,
+      principal: Principal?
+  ): ResponseEntity<PagedResources<Resource<Package>>> {
+    val page = packageService.getPackagesByVendor(principal?.name, pageable, vendor)
+    val responseHeaders = HttpHeaders()
 
-
-  private fun createLinkHeader(pagedResource: PagedResources<Resource<Package>>): String {
-
-    val linkHeader = StringBuilder()
-
-    linkHeader.append(buildLinkHeader(pagedResource.getLinks("first")[0].href, "first"))
-    linkHeader.append(", ")
-    linkHeader.append(buildLinkHeader(pagedResource.getLinks("next")[0].href, "next"))
-
-    return linkHeader.toString()
-  }
-
-  fun buildLinkHeader(uri: String, rel: String): String {
-    return "<$uri>; rel=\"$rel\""
+    return ResponseEntity(assembler.toResource(page, linkTo(PackageRestController::class.java).slash("/packages").withSelfRel()), responseHeaders, HttpStatus.OK)
   }
 
   companion object {
