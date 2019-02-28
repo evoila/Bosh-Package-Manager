@@ -16,27 +16,22 @@ class AmazonS3Service(
 ) {
 
   fun getS3Credentials(operation: Operation): Credentials {
-
     val credentials = makeCreds(operation)
-
     val stsClient = AWSSecurityTokenServiceClientBuilder
         .standard()
         .withRegion(s3Config.region)
         .withCredentials(AWSStaticCredentialsProvider(credentials))
         .build()
-
     val sessionTokenRequest = GetSessionTokenRequest()
     sessionTokenRequest.apply {
-      durationSeconds = 900
+      durationSeconds = s3Config.expiration
     }
-
     val result = stsClient.getSessionToken(sessionTokenRequest)
 
     return result.credentials
   }
 
   private fun makeCreds(operation: Operation): BasicAWSCredentials {
-
     val key = operation.name.toLowerCase()
 
     return s3Config.creds[key]?.let {
@@ -46,12 +41,10 @@ class AmazonS3Service(
   }
 
   fun deleteObject(s3location: String) {
-
     val s3Client = AmazonS3ClientBuilder.standard()
         .withCredentials(AWSStaticCredentialsProvider(makeCreds(Operation.UPLOAD)))
         .withRegion(s3Config.region)
         .build()
-
     s3Client.deleteObject(s3Config.bucket, s3location)
   }
 

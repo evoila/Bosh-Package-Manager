@@ -1,7 +1,6 @@
 package de.evoila.bpm.custom.elasticsearch.repositories
 
 import de.evoila.bpm.custom.elasticsearch.ElasticSearchRestTemplate
-
 import de.evoila.bpm.entities.BaseEntity
 import org.elasticsearch.action.DocWriteResponse
 import org.elasticsearch.action.delete.DeleteRequest
@@ -11,9 +10,7 @@ import org.elasticsearch.action.index.IndexRequest
 import org.elasticsearch.action.search.SearchRequest
 import org.elasticsearch.common.xcontent.XContentType
 import org.slf4j.LoggerFactory
-import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Repository
-import java.util.*
 
 @Repository
 abstract class AbstractElasticSearchRepository<T : BaseEntity>(
@@ -21,7 +18,6 @@ abstract class AbstractElasticSearchRepository<T : BaseEntity>(
 ) {
 
   abstract val index: String
-
 
   abstract fun serializeObject(entity: T): String
 
@@ -52,7 +48,6 @@ abstract class AbstractElasticSearchRepository<T : BaseEntity>(
       return@map it
     }
   }
-
 
   fun findAllById(ids: MutableIterable<String>): List<T> {
     return ids.map { id ->

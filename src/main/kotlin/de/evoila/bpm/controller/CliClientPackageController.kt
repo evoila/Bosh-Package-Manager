@@ -155,7 +155,6 @@ class CliClientPackageController(
     ResponseEntity.status(HttpStatus.NOT_FOUND).build()
   }
 
-
   @PatchMapping(value = ["publish/{id}"])
   fun publishPackage(
       @PathVariable(value = "id") id: String,
