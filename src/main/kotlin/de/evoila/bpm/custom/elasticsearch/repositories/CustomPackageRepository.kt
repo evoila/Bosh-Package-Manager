@@ -4,7 +4,8 @@ import de.evoila.bpm.custom.elasticsearch.ElasticSearchRestTemplate
 import de.evoila.bpm.entities.Package
 import kotlinx.serialization.json.Json
 import org.elasticsearch.action.search.SearchRequest
-import org.elasticsearch.index.query.*
+import org.elasticsearch.index.query.BoolQueryBuilder
+import org.elasticsearch.index.query.MatchQueryBuilder
 import org.elasticsearch.search.builder.SearchSourceBuilder
 import org.elasticsearch.search.sort.FieldSortBuilder
 import org.elasticsearch.search.sort.SortOrder
@@ -13,7 +14,6 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Repository
-import java.util.*
 
 @Repository
 class CustomPackageRepository(
@@ -38,7 +38,6 @@ class CustomPackageRepository(
     boolQueryBuilder.must(MatchQueryBuilder(FIELD_NAME + KEYWORD, name))
     boolQueryBuilder.must(MatchQueryBuilder(FIELD_VERSION + KEYWORD, version))
     searchSourceBuilder.query(boolQueryBuilder).size(1)
-
     val searchRequest = SearchRequest().indices(index).types(type)
         .source(searchSourceBuilder)
     val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
