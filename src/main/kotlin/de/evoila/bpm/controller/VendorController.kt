@@ -57,13 +57,6 @@ class VendorController(
         ResponseEntity.ok<Any>(vendors)
       } ?: ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
 
-  @GetMapping(value = ["vendors"])
-  fun findByName(@RequestParam(value = "name") name: String): ResponseEntity<Vendor> =
-      vendorService.findByName(name)?.let {
-        ResponseEntity.ok(it)
-      } ?: ResponseEntity.notFound().build()
-
-
   companion object {
     val log: Logger = LoggerFactory.getLogger(VendorController::class.java)
   }
