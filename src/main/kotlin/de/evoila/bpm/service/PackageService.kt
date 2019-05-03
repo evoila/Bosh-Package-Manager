@@ -17,8 +17,8 @@ import java.util.*
 
 @Service
 class PackageService(
-    val packageRepository: CustomPackageRepository,
-    val amazonS3Service: AmazonS3Service
+   private val packageRepository: CustomPackageRepository,
+   private val amazonS3Service: AmazonS3Service
 ) {
 
   fun getAllPackages(username: String?, pageable: Pageable): Page<Package> =

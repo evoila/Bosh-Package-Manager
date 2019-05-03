@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service
 
 @Service
 class UserService(
-    val userRepository: CustomUserRepository
+   private val userRepository: CustomUserRepository
 ) {
 
   fun userExits(id: String): Boolean = userRepository.existsById(id)

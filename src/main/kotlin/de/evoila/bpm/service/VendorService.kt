@@ -10,8 +10,8 @@ import org.springframework.stereotype.Service
 
 @Service
 class VendorService(
-    val customVendorRepository: CustomVendorRepository,
-    val userRepository: CustomUserRepository
+    private val customVendorRepository: CustomVendorRepository,
+    private val userRepository: CustomUserRepository
 ) {
 
   fun isMemberOf(username: String, vendorName: String): Boolean = customVendorRepository.findByName(vendorName)?.let {
