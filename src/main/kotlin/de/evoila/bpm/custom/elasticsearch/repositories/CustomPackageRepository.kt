@@ -146,6 +146,32 @@ class CustomPackageRepository(
     return PageImpl(content, pageable, response.hits.totalHits)
   }
 
+  fun searchByVendorAndName(pageable: Pageable, username: String?, vendor: String, name : String): Page<Package> {
+    val searchSourceBuilder = SearchSourceBuilder()
+        .from(pageable.pageNumber)
+        .size(pageable.pageSize)
+    pageable.sort.forEach {
+      searchSourceBuilder.sort(FieldSortBuilder(it.property)
+          .order(SortOrder.fromString(it.direction.name)))
+    }
+    val boolQueryBuilder = BoolQueryBuilder()
+    boolQueryBuilder.must(MatchQueryBuilder(FIELD_VENDOR, vendor))
+    boolQueryBuilder.must(MatchQueryBuilder(FIELD_NAME, name))
+    searchSourceBuilder.query(boolQueryBuilder)
+    boolQueryBuilder.must(buildAccessQuery(username))
+    val response = elasticSearchRestTemplate.performSearchRequest(
+        SearchRequest()
+            .indices(index)
+            .types(type)
+            .source(searchSourceBuilder))
+
+    val content = response.hits.map {
+      Json.parse(Package.serializer(), it.sourceAsString)
+    }
+
+    return PageImpl(content, pageable, response.hits.totalHits)
+  }
+
   private fun buildAccessQuery(username: String?): BoolQueryBuilder {
     val accessQuery = BoolQueryBuilder()
     accessQuery.should(MatchQueryBuilder(FIELD_ACCESS_LEVEL + KEYWORD, Package.AccessLevel.PUBLIC.name))

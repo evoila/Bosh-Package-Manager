@@ -45,6 +45,20 @@ class PackageRestController(
     return ResponseEntity(assembler.toResource(page, linkTo(PackageRestController::class.java).slash("/packages").withSelfRel()), responseHeaders, HttpStatus.OK)
   }
 
+  @GetMapping(value = ["/rest/packages/{vendor}/{name}"])
+  fun searchByVendorAndName(
+      pageable: Pageable,
+      @PathVariable(value = "vendor") vendor: String,
+      @PathVariable(value = "name") name: String,
+      assembler: PagedResourcesAssembler<Package>,
+      principal: Principal?
+  ): ResponseEntity<PagedResources<Resource<Package>>> {
+    val page = packageService.getPackagesByVendorAndName(principal?.name, pageable, vendor, name)
+    val responseHeaders = HttpHeaders()
+
+    return ResponseEntity(assembler.toResource(page, linkTo(PackageRestController::class.java).slash("/packages").withSelfRel()), responseHeaders, HttpStatus.OK)
+  }
+
   companion object {
     private val log: Logger = LoggerFactory.getLogger(PackageRestController::class.java)
   }

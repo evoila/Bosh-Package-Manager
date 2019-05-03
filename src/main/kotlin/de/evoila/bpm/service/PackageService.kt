@@ -27,6 +27,11 @@ class PackageService(
   fun getPackagesByVendor(username: String?, pageable: Pageable, vendor: String): Page<Package> =
       packageRepository.searchByVendor(pageable, username, vendor)
 
+  fun getPackagesByVendorAndName(username: String?, pageable: Pageable, vendor: String, name : String): Page<Package> =
+      packageRepository.searchByVendorAndName(pageable, username, vendor, name)
+
+
+
   fun getPackagesByName(username: String?, packageName: String): List<Package> =
       packageRepository.searchPackagesByName(packageName, username)
 
