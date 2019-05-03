@@ -141,6 +141,20 @@ class CliClientPackageController(
     ResponseEntity.notFound().build()
   }
 
+  @DeleteMapping(value = ["package/{vendor}/{name}/{version}"])
+  fun deletePackageByVendorNameVersion(
+      @PathVariable(value = "vendor") vendor: String,
+      @PathVariable(value = "name") name: String,
+      @PathVariable(value = "version") version: String
+  ): ResponseEntity<Any> = try {
+    packageService.deletePackageIfAllowed(vendor, name, version)
+
+    ResponseEntity.status(HttpStatus.ACCEPTED).build()
+  } catch (e: PackageNotFoundException) {
+
+    ResponseEntity.status(HttpStatus.NOT_FOUND).build()
+  }
+
   @PatchMapping(value = ["publish/{id}"])
   fun publishPackage(
       @PathVariable(value = "id") id: String,

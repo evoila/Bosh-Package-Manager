@@ -1,5 +1,6 @@
 package de.evoila.bpm.controller
 
+import de.evoila.bpm.entities.Vendor
 import de.evoila.bpm.exceptions.UnauthorizedException
 import de.evoila.bpm.service.VendorService
 import org.slf4j.Logger
@@ -55,7 +56,6 @@ class VendorController(
         val vendors = vendorService.vendorsForUsers(principal.name)
         ResponseEntity.ok<Any>(vendors)
       } ?: ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
-
 
   companion object {
     val log: Logger = LoggerFactory.getLogger(VendorController::class.java)

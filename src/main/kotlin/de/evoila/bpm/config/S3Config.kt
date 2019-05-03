@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration
 class S3Config {
   lateinit var bucket: String
   lateinit var region: String
+  var expiration: Int = 900
 
   val creds: HashMap<String, Creds> = hashMapOf()
 }
