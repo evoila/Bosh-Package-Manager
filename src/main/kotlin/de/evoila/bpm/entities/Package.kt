@@ -1,5 +1,6 @@
 package de.evoila.bpm.entities
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.net.URL
@@ -17,6 +18,8 @@ data class Package(
     val vendor: String,
     @SerialName(value = "s3_location")
     val s3location: String,
+    //Spring uses JsonProperty, Elastic SerialName
+    @JsonProperty(value = "upload_date")
     @SerialName(value = "upload_date")
     val uploadDate: String,
     @SerialName(value = "files")
