@@ -11,8 +11,8 @@ data class PackageBody(
     val name: String,
     @JsonProperty("version")
     val version: String,
-    @JsonProperty("vendor")
-    val vendor: String,
+    @JsonProperty("publisher")
+    val publisher: String,
     @JsonProperty("files")
     val files: List<String>,
     @JsonProperty("dependencies")

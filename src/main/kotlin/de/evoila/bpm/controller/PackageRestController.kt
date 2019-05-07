@@ -32,28 +32,28 @@ class PackageRestController(
     return ResponseEntity(assembler.toResource(page, linkTo(PackageRestController::class.java).slash("/packages").withSelfRel()), responseHeaders, HttpStatus.OK)
   }
 
-  @GetMapping(value = ["/rest/packages/{vendor}"])
-  fun searchByVendor(
+  @GetMapping(value = ["/rest/packages/{publisher}"])
+  fun searchByPublisher(
       pageable: Pageable,
-      @PathVariable(value = "vendor") vendor: String,
+      @PathVariable(value = "publisher") publisher: String,
       assembler: PagedResourcesAssembler<Package>,
       principal: Principal?
   ): ResponseEntity<PagedResources<Resource<Package>>> {
-    val page = packageService.getPackagesByVendor(principal?.name, pageable, vendor)
+    val page = packageService.getPackagesByPublisher(principal?.name, pageable, publisher)
     val responseHeaders = HttpHeaders()
 
     return ResponseEntity(assembler.toResource(page, linkTo(PackageRestController::class.java).slash("/packages").withSelfRel()), responseHeaders, HttpStatus.OK)
   }
 
-  @GetMapping(value = ["/rest/packages/{vendor}/{name}"])
-  fun searchByVendorAndName(
+  @GetMapping(value = ["/rest/packages/{publisher}/{name}"])
+  fun searchByPublisherAndName(
       pageable: Pageable,
-      @PathVariable(value = "vendor") vendor: String,
+      @PathVariable(value = "publisher") publisher: String,
       @PathVariable(value = "name") name: String,
       assembler: PagedResourcesAssembler<Package>,
       principal: Principal?
   ): ResponseEntity<PagedResources<Resource<Package>>> {
-    val page = packageService.getPackagesByVendorAndName(principal?.name, pageable, vendor, name)
+    val page = packageService.getPackagesByPublisherAndName(principal?.name, pageable, publisher, name)
     val responseHeaders = HttpHeaders()
 
     return ResponseEntity(assembler.toResource(page, linkTo(PackageRestController::class.java).slash("/packages").withSelfRel()), responseHeaders, HttpStatus.OK)

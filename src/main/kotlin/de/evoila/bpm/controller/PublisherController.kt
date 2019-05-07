@@ -1,8 +1,7 @@
 package de.evoila.bpm.controller
 
-import de.evoila.bpm.entities.Vendor
 import de.evoila.bpm.exceptions.UnauthorizedException
-import de.evoila.bpm.service.VendorService
+import de.evoila.bpm.service.PublisherService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -11,15 +10,15 @@ import org.springframework.web.bind.annotation.*
 import java.security.Principal
 
 @RestController
-class VendorController(
-    val vendorService: VendorService) {
+class PublisherController(
+    val publisherService: PublisherService) {
 
-  @PostMapping(value = ["vendors"])
-  fun createNewVendor(
+  @PostMapping(value = ["publishers"])
+  fun createNewPublisher(
       @RequestParam("name") name: String,
       principal: Principal
   ): ResponseEntity<Any> = try {
-    vendorService.createNewVendor(name, principal.name)
+    publisherService.createNewPublisher(name, principal.name)
 
     ResponseEntity.status(HttpStatus.CREATED).build()
   } catch (e: Exception) {
@@ -28,18 +27,18 @@ class VendorController(
     ResponseEntity.status(HttpStatus.CONFLICT).build()
   }
 
-  @PatchMapping(value = ["vendors/add-member"])
-  fun addNewMember(@RequestParam(value = "vendor") vendor: String,
+  @PatchMapping(value = ["publishers/add-member"])
+  fun addNewMember(@RequestParam(value = "publisher") publisher: String,
                    @RequestParam(value = "email") email: String,
                    principal: Principal
   ): ResponseEntity<Any> = try {
-    vendorService.addMemberToVendor(
+    publisherService.addMemberToPublisher(
         admin = principal.name,
-        vendorName = vendor,
+        publisherName = publisher,
         email = email
     )
 
-    ResponseEntity.status(HttpStatus.ACCEPTED).body("Added $email to $vendor")
+    ResponseEntity.status(HttpStatus.ACCEPTED).body("Added $email to $publisher")
   } catch (e: UnauthorizedException) {
     log.error(e.message, e)
 
@@ -50,14 +49,14 @@ class VendorController(
     ResponseEntity.badRequest().body(e.message)
   }
 
-  @GetMapping(value = ["vendors/member-of"])
+  @GetMapping(value = ["publishers/member-of"])
   fun memberOf(principal: Principal?): ResponseEntity<Any> =
       principal?.let {
-        val vendors = vendorService.vendorsForUsers(principal.name)
-        ResponseEntity.ok<Any>(vendors)
+        val publisher = publisherService.publishersForUsers(principal.name)
+        ResponseEntity.ok<Any>(publisher)
       } ?: ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
 
   companion object {
-    val log: Logger = LoggerFactory.getLogger(VendorController::class.java)
+    val log: Logger = LoggerFactory.getLogger(PublisherController::class.java)
   }
 }

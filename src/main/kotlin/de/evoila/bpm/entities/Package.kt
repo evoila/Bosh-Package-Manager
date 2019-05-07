@@ -3,7 +3,6 @@ package de.evoila.bpm.entities
 import com.fasterxml.jackson.annotation.JsonProperty
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import java.net.URL
 import java.util.*
 
 @Serializable
@@ -14,8 +13,8 @@ data class Package(
     val name: String,
     @SerialName(value = "version")
     val version: String,
-    @SerialName(value = "vendor")
-    val vendor: String,
+    @SerialName(value = "publisher")
+    val publisher: String,
     @SerialName(value = "s3_location")
     val s3location: String,
     //Spring uses JsonProperty, Elastic SerialName
@@ -44,7 +43,7 @@ data class Package(
       id = this.id,
       name = this.name,
       version = this.version,
-      vendor = this.vendor,
+      publisher = this.publisher,
       s3location = this.s3location,
       uploadDate = this.uploadDate,
       files = this.files,
@@ -58,13 +57,13 @@ data class Package(
   )
 
   enum class AccessLevel {
-    PRIVATE, VENDOR, PUBLIC;
+    PRIVATE, PUBLISHER, PUBLIC;
 
     fun isAbove(accessLevel: AccessLevel): Boolean {
       return when (this) {
         PUBLIC -> false
-        VENDOR -> accessLevel == PUBLIC
-        PRIVATE -> accessLevel == VENDOR || accessLevel == PUBLIC
+        PUBLISHER -> accessLevel == PUBLIC
+        PRIVATE -> accessLevel == PUBLISHER || accessLevel == PUBLIC
       }
     }
   }
