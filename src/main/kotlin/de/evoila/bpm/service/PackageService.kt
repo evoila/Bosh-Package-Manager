@@ -17,19 +17,18 @@ import java.util.*
 
 @Service
 class PackageService(
-   private val packageRepository: CustomPackageRepository,
-   private val amazonS3Service: AmazonS3Service
+    private val packageRepository: CustomPackageRepository,
+    private val amazonS3Service: AmazonS3Service
 ) {
 
   fun getAllPackages(username: String?, pageable: Pageable): Page<Package> =
       packageRepository.findAll(pageable, username)
 
-  fun getPackagesByVendor(username: String?, pageable: Pageable, vendor: String): Page<Package> =
-      packageRepository.searchByVendor(pageable, username, vendor)
+  fun getPackagesByPublisher(username: String?, pageable: Pageable, vendor: String): Page<Package> =
+      packageRepository.searchByPublisher(pageable, username, vendor)
 
-  fun getPackagesByVendorAndName(username: String?, pageable: Pageable, vendor: String, name : String): Page<Package> =
-      packageRepository.searchByVendorAndName(pageable, username, vendor, name)
-
+  fun getPackagesByPublisherAndName(username: String?, pageable: Pageable, vendor: String, name: String): Page<Package> =
+      packageRepository.searchByPublisherAndName(pageable, username, vendor, name)
 
 
   fun getPackagesByName(username: String?, packageName: String): List<Package> =
@@ -40,20 +39,20 @@ class PackageService(
   @Throws(PackageNotFoundException::class)
   fun accessPackage(vendor: String, name: String, version: String, username: String?): Package {
 
-    return packageRepository.findByVendorAndNameAndVersion(vendor, name, version, username)
-        ?: throw PackageNotFoundException("didn't not find a package with vendor : $vendor , name : $name:$version")
+    return packageRepository.findByPublisherAndNameAndVersion(vendor, name, version, username)
+        ?: throw PackageNotFoundException("didn't not find a package with publisher : $vendor , name : $name:$version")
   }
 
   fun checkIfPresent(packageBody: PackageBody): Package? {
-    return packageRepository.findByVendorAndNameAndVersion(packageBody.vendor, packageBody.name, packageBody.version)
+    return packageRepository.findByPublisherAndNameAndVersion(packageBody.publisher, packageBody.name, packageBody.version)
   }
 
   fun putPendingPackage(packageBody: PackageBody, signingKey: String
   ): String {
     log.info("Pending package: $packageBody")
 
-    packageRepository.findByVendorAndNameAndVersion(
-        vendor = packageBody.vendor,
+    packageRepository.findByPublisherAndNameAndVersion(
+        publisher = packageBody.publisher,
         name = packageBody.name,
         version = packageBody.version)?.let {
 
@@ -65,7 +64,7 @@ class PackageService(
 
     pendingPackages.put(s3location, Package(
         name = packageBody.name,
-        vendor = packageBody.vendor,
+        publisher = packageBody.publisher,
         version = packageBody.version,
         uploadDate = Instant.now().toString(),
         s3location = s3location,
@@ -92,7 +91,7 @@ class PackageService(
     packageRepository.save(pack.changeAccessLevel(accessLevel))
 
     pack.dependencies?.forEach {
-      val dependency = accessPackage(it.vendor, it.name, it.version, username)
+      val dependency = accessPackage(it.publisher, it.name, it.version, username)
 
       if (dependency.accessLevel.isAbove(accessLevel)) {
         alterAccessLevel(username, accessLevel, dependency)
@@ -101,7 +100,7 @@ class PackageService(
   }
 
   fun deletePackageIfAllowed(vendor: String, name: String, version: String) {
-    val pack = packageRepository.findByVendorAndNameAndVersion(vendor, name, version)
+    val pack = packageRepository.findByPublisherAndNameAndVersion(vendor, name, version)
     pack?.let {
       packageRepository.deleteById(it.id)
       amazonS3Service.deleteObject(it.s3location)

@@ -11,8 +11,8 @@ data class Stemcell(
     val family: String,
     @JsonProperty(value = "major_version")
     @SerialName(value = "major_version")
-    val majorVersion: Int,
+    val majorVersion: String,
     @JsonProperty(value = "minor_version")
     @SerialName(value = "minor_version")
-    val minorVersion: Int
+    val minorVersion: String
 ) : java.io.Serializable

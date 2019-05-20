@@ -8,7 +8,7 @@ import de.evoila.bpm.rest.bodies.S3Permission
 import de.evoila.bpm.service.AmazonS3Service
 import de.evoila.bpm.service.AmazonS3Service.Operation.*
 import de.evoila.bpm.service.PackageService
-import de.evoila.bpm.service.VendorService
+import de.evoila.bpm.service.PublisherService
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -19,7 +19,7 @@ import java.security.Principal
 @RestController
 class CliClientPackageController(
     val packageService: PackageService,
-    val vendorService: VendorService,
+    val publisherService: PublisherService,
     val s3Config: S3Config,
     val amazonS3Service: AmazonS3Service
 ) {
@@ -52,13 +52,13 @@ class CliClientPackageController(
     val username = principal?.name ?: return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
         .body("Please log yourself in.")
 
-    if (!vendorService.isMemberOf(username, packageBody.vendor)) {
+    if (!publisherService.isMemberOf(username, packageBody.publisher)) {
 
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("You are not a member of ${packageBody.vendor}")
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("You are not a member of ${packageBody.publisher}")
     }
 
-    if (packageBody.name.isEmpty() || packageBody.vendor.isEmpty() || packageBody.version.isEmpty()) {
-      return ResponseEntity.badRequest().body("A package needs a name, version and a registered vendor.")
+    if (packageBody.name.isEmpty() || packageBody.publisher.isEmpty() || packageBody.version.isEmpty()) {
+      return ResponseEntity.badRequest().body("A package needs a name, version and a registered publisher.")
     }
 
     if (!force) {
@@ -79,7 +79,7 @@ class CliClientPackageController(
         sessionToken = uploadCredentials.sessionToken
     )
 
-    log.info("Granting permission to upload package '${packageBody.name}:${packageBody.version} by ${packageBody.vendor}'")
+    log.info("Granting permission to upload package '${packageBody.name}:${packageBody.version} by ${packageBody.publisher}'")
 
     return ResponseEntity.accepted().body(uploadPermission)
   }
@@ -102,14 +102,14 @@ class CliClientPackageController(
     return ResponseEntity.ok(packages)
   }
 
-  @GetMapping(value = ["package/{vendor}/{name}/{version}"])
-  fun getPackageByVendorNameVersion(@PathVariable(value = "vendor") vendor: String,
-                                    @PathVariable(value = "name") name: String,
-                                    @PathVariable(value = "version") version: String,
-                                    principal: Principal?
+  @GetMapping(value = ["package/{publisher}/{name}/{version}"])
+  fun getPackageByPublisherNameVersion(@PathVariable(value = "publisher") publisher: String,
+                                       @PathVariable(value = "name") name: String,
+                                       @PathVariable(value = "version") version: String,
+                                       principal: Principal?
   ): ResponseEntity<Any> = try {
-    val packageBody = packageService.accessPackage(vendor, name, version, principal?.name)
-    log.info("Exposing package information for '$name:$version by $vendor'")
+    val packageBody = packageService.accessPackage(publisher, name, version, principal?.name)
+    log.info("Exposing package information for '$name:$version by $publisher'")
 
     ResponseEntity.ok(packageBody)
   } catch (e: PackageNotFoundException) {
@@ -117,13 +117,13 @@ class CliClientPackageController(
     ResponseEntity.notFound().build()
   }
 
-  @GetMapping(value = ["download/{vendor}/{name}/{version}"])
-  fun downloadPermissionByPackageByVendorNameVersion(@PathVariable(value = "vendor") vendor: String,
+  @GetMapping(value = ["download/{publisher}/{name}/{version}"])
+  fun downloadPermissionByPackageByPublisherNameVersion(@PathVariable(value = "publisher") publisher: String,
                                                      @PathVariable(value = "name") name: String,
                                                      @PathVariable(value = "version") version: String,
                                                      principal: Principal?
   ): ResponseEntity<Any> = try {
-    val packageBody = packageService.accessPackage(vendor, name, version, principal?.name)
+    val packageBody = packageService.accessPackage(publisher, name, version, principal?.name)
     val downloadCredentials = amazonS3Service.getS3Credentials(DOWNLOAD)
     val downloadPermission = S3Permission(
         bucket = s3Config.bucket,
@@ -133,7 +133,7 @@ class CliClientPackageController(
         s3location = packageBody.s3location,
         sessionToken = downloadCredentials.sessionToken
     )
-    log.info("Created Permission to download package '$name:$version by $vendor'")
+    log.info("Created Permission to download package '$name:$version by $publisher'")
 
     ResponseEntity.ok(downloadPermission)
   } catch (e: PackageNotFoundException) {
@@ -141,13 +141,13 @@ class CliClientPackageController(
     ResponseEntity.notFound().build()
   }
 
-  @DeleteMapping(value = ["package/{vendor}/{name}/{version}"])
-  fun deletePackageByVendorNameVersion(
-      @PathVariable(value = "vendor") vendor: String,
+  @DeleteMapping(value = ["package/{publisher}/{name}/{version}"])
+  fun deletePackageByPublisherNameVersion(
+      @PathVariable(value = "publisher") publisher: String,
       @PathVariable(value = "name") name: String,
       @PathVariable(value = "version") version: String
   ): ResponseEntity<Any> = try {
-    packageService.deletePackageIfAllowed(vendor, name, version)
+    packageService.deletePackageIfAllowed(publisher, name, version)
 
     ResponseEntity.status(HttpStatus.ACCEPTED).build()
   } catch (e: PackageNotFoundException) {

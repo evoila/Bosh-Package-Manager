@@ -9,6 +9,6 @@ data class Dependency(
     val name: String,
     @SerialName(value = "version")
     val version: String,
-    @SerialName(value = "vendor")
-    val vendor: String
+    @SerialName(value = "publisher")
+    val publisher: String
 )

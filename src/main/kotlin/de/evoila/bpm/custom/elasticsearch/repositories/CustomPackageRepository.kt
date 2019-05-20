@@ -18,7 +18,7 @@ import org.springframework.stereotype.Repository
 @Repository
 class CustomPackageRepository(
     elasticSearchRestTemplate: ElasticSearchRestTemplate,
-    val vendorRepository: CustomVendorRepository
+    val publisherRepository: CustomPublisherRepository
 ) : AbstractElasticSearchRepository<Package>(
     elasticSearchRestTemplate
 ) {
@@ -30,11 +30,11 @@ class CustomPackageRepository(
     return Json.stringify(Package.serializer(), entity)
   }
 
-  fun findByVendorAndNameAndVersion(vendor: String, name: String, version: String): Package? {
+  fun findByPublisherAndNameAndVersion(publisher: String, name: String, version: String): Package? {
 
     val searchSourceBuilder = SearchSourceBuilder()
     val boolQueryBuilder = BoolQueryBuilder()
-    boolQueryBuilder.must(MatchQueryBuilder(FIELD_VENDOR + KEYWORD, vendor))
+    boolQueryBuilder.must(MatchQueryBuilder(FIELD_PUBLISHER + KEYWORD, publisher))
     boolQueryBuilder.must(MatchQueryBuilder(FIELD_NAME + KEYWORD, name))
     boolQueryBuilder.must(MatchQueryBuilder(FIELD_VERSION + KEYWORD, version))
     searchSourceBuilder.query(boolQueryBuilder).size(1)
@@ -52,10 +52,10 @@ class CustomPackageRepository(
     return response.hits.map { Json.parse(Package.serializer(), it.sourceAsString) }.firstOrNull()
   }
 
-  fun findByVendorAndNameAndVersion(vendor: String, name: String, version: String, username: String?): Package? {
+  fun findByPublisherAndNameAndVersion(publisher: String, name: String, version: String, username: String?): Package? {
     val searchSourceBuilder = SearchSourceBuilder()
     val boolQueryBuilder = BoolQueryBuilder()
-    boolQueryBuilder.must(MatchQueryBuilder(FIELD_VENDOR + KEYWORD, vendor))
+    boolQueryBuilder.must(MatchQueryBuilder(FIELD_PUBLISHER + KEYWORD, publisher))
     boolQueryBuilder.must(MatchQueryBuilder(FIELD_NAME + KEYWORD, name))
     boolQueryBuilder.must(MatchQueryBuilder(FIELD_VERSION + KEYWORD, version))
     boolQueryBuilder.must(buildAccessQuery(username))
@@ -121,7 +121,7 @@ class CustomPackageRepository(
     }
   }
 
-  fun searchByVendor(pageable: Pageable, username: String?, vendor: String): Page<Package> {
+  fun searchByPublisher(pageable: Pageable, username: String?, publisher: String): Page<Package> {
     val searchSourceBuilder = SearchSourceBuilder()
         .from(pageable.pageNumber)
         .size(pageable.pageSize)
@@ -130,7 +130,7 @@ class CustomPackageRepository(
           .order(SortOrder.fromString(it.direction.name)))
     }
     val boolQueryBuilder = BoolQueryBuilder()
-    boolQueryBuilder.must(MatchQueryBuilder(FIELD_VENDOR, vendor))
+    boolQueryBuilder.must(MatchQueryBuilder(FIELD_PUBLISHER, publisher))
     searchSourceBuilder.query(boolQueryBuilder)
     boolQueryBuilder.must(buildAccessQuery(username))
     val response = elasticSearchRestTemplate.performSearchRequest(
@@ -146,7 +146,7 @@ class CustomPackageRepository(
     return PageImpl(content, pageable, response.hits.totalHits)
   }
 
-  fun searchByVendorAndName(pageable: Pageable, username: String?, vendor: String, name : String): Page<Package> {
+  fun searchByPublisherAndName(pageable: Pageable, username: String?, publisher: String, name : String): Page<Package> {
     val searchSourceBuilder = SearchSourceBuilder()
         .from(pageable.pageNumber)
         .size(pageable.pageSize)
@@ -155,7 +155,7 @@ class CustomPackageRepository(
           .order(SortOrder.fromString(it.direction.name)))
     }
     val boolQueryBuilder = BoolQueryBuilder()
-    boolQueryBuilder.must(MatchQueryBuilder(FIELD_VENDOR, vendor))
+    boolQueryBuilder.must(MatchQueryBuilder(FIELD_PUBLISHER, publisher))
     boolQueryBuilder.must(MatchQueryBuilder(FIELD_NAME, name))
     searchSourceBuilder.query(boolQueryBuilder)
     boolQueryBuilder.must(buildAccessQuery(username))
@@ -177,7 +177,7 @@ class CustomPackageRepository(
     accessQuery.should(MatchQueryBuilder(FIELD_ACCESS_LEVEL + KEYWORD, Package.AccessLevel.PUBLIC.name))
     username?.let {
       accessQuery.should(buildPrivate(it))
-      accessQuery.should(buildVendor(it))
+      accessQuery.should(buildPublisherQuery(it))
     }
 
     return accessQuery
@@ -191,20 +191,20 @@ class CustomPackageRepository(
     return privateQuery
   }
 
-  fun buildVendor(username: String): BoolQueryBuilder {
-    val vendors = vendorRepository.memberOfByName(username)
-    val fullVendorQuery = BoolQueryBuilder()
-    fullVendorQuery.must(MatchQueryBuilder(FIELD_ACCESS_LEVEL + KEYWORD, Package.AccessLevel.VENDOR.name))
-    val vendorQuery = BoolQueryBuilder()
-    vendors.forEach { vendorQuery.should(MatchQueryBuilder(FIELD_VENDOR + KEYWORD, it.name)) }
-    fullVendorQuery.must(vendorQuery)
+  fun buildPublisherQuery(username: String): BoolQueryBuilder {
+    val publishers = publisherRepository.memberOfByName(username)
+    val fullPublisherQuery = BoolQueryBuilder()
+    fullPublisherQuery.must(MatchQueryBuilder(FIELD_ACCESS_LEVEL + KEYWORD, Package.AccessLevel.PUBLISHER.name))
+    val publisherQuery = BoolQueryBuilder()
+    publishers.forEach { publisherQuery.should(MatchQueryBuilder(FIELD_PUBLISHER + KEYWORD, it.name)) }
+    fullPublisherQuery.must(publisherQuery)
 
-    return fullVendorQuery
+    return fullPublisherQuery
   }
 
   companion object {
     private const val FIELD_NAME = "name"
-    private const val FIELD_VENDOR = "vendor"
+    private const val FIELD_PUBLISHER = "publisher"
     private const val FIELD_VERSION = "version"
     private const val FIELD_ACCESS_LEVEL = "access_level"
     private const val FIELD_SIGNED_WITH = "signed_with"

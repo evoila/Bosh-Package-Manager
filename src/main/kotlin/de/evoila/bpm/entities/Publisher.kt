@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 import java.util.*
 
 @Serializable
-data class Vendor(
+data class Publisher(
 
     val name: String,
     val members: Set<String>,
