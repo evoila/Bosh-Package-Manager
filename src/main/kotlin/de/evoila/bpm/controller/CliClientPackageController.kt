@@ -102,14 +102,14 @@ class CliClientPackageController(
     return ResponseEntity.ok(packages)
   }
 
-  @GetMapping(value = ["package/{publisher}/{name}/{version}"])
+  @GetMapping(value = ["package/{publisher}/{name}"])
   fun getPackageByPublisherNameVersion(@PathVariable(value = "publisher") publisher: String,
                                        @PathVariable(value = "name") name: String,
-                                       @PathVariable(value = "version") version: String,
+                                       @RequestParam(value = "version") version: String,
                                        principal: Principal?
   ): ResponseEntity<Any> = try {
     val packageBody = packageService.accessPackage(publisher, name, version, principal?.name)
-    log.info("Exposing package information for '$name:$version by $publisher'")
+    log.info("Exposing package information for '$publisher:$name:$version'")
 
     ResponseEntity.ok(packageBody)
   } catch (e: PackageNotFoundException) {
@@ -119,9 +119,9 @@ class CliClientPackageController(
 
   @GetMapping(value = ["download/{publisher}/{name}/{version}"])
   fun downloadPermissionByPackageByPublisherNameVersion(@PathVariable(value = "publisher") publisher: String,
-                                                     @PathVariable(value = "name") name: String,
-                                                     @PathVariable(value = "version") version: String,
-                                                     principal: Principal?
+                                                        @PathVariable(value = "name") name: String,
+                                                        @PathVariable(value = "version") version: String,
+                                                        principal: Principal?
   ): ResponseEntity<Any> = try {
     val packageBody = packageService.accessPackage(publisher, name, version, principal?.name)
     val downloadCredentials = amazonS3Service.getS3Credentials(DOWNLOAD)
@@ -133,7 +133,7 @@ class CliClientPackageController(
         s3location = packageBody.s3location,
         sessionToken = downloadCredentials.sessionToken
     )
-    log.info("Created Permission to download package '$name:$version by $publisher'")
+    log.info("Created Permission to download package '$publisher:$name:$version'")
 
     ResponseEntity.ok(downloadPermission)
   } catch (e: PackageNotFoundException) {
