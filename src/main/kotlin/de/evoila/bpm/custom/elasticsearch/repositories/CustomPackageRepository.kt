@@ -25,13 +25,11 @@ class CustomPackageRepository(
 
   override val index: String = "packages"
 
-  override fun serializeObject(entity: Package): String {
+  override fun serializeObject(entity: Package): String = Json.stringify(Package.serializer(), entity)
 
-    return Json.stringify(Package.serializer(), entity)
-  }
+  fun save(entity: Package): Package = super.save(entity, VERSION_PIPELINE)
 
   fun findByPublisherAndNameAndVersion(publisher: String, name: String, version: String): Package? {
-
     val searchSourceBuilder = SearchSourceBuilder()
     val boolQueryBuilder = BoolQueryBuilder()
     boolQueryBuilder.must(MatchQueryBuilder(FIELD_PUBLISHER + KEYWORD, publisher))
@@ -52,7 +50,79 @@ class CustomPackageRepository(
     return response.hits.map { Json.parse(Package.serializer(), it.sourceAsString) }.firstOrNull()
   }
 
-  fun findByPublisherAndNameAndVersion(publisher: String, name: String, version: String, username: String?): Package? {
+  fun getNewest(publisher: String, name: String, username: String?): Package? {
+    val searchSourceBuilder = SearchSourceBuilder()
+    val boolQueryBuilder = BoolQueryBuilder()
+    boolQueryBuilder.must(MatchQueryBuilder(FIELD_PUBLISHER + KEYWORD, publisher))
+    boolQueryBuilder.must(MatchQueryBuilder(FIELD_NAME + KEYWORD, name))
+    boolQueryBuilder.must(buildAccessQuery(username))
+    searchSourceBuilder.query(boolQueryBuilder).size(1)
+    searchSourceBuilder.sort(FieldSortBuilder(SEMVER_MAJOR + KEYWORD).order(SortOrder.DESC))
+    searchSourceBuilder.sort(FieldSortBuilder(SEMVER_MINOR + KEYWORD).order(SortOrder.DESC))
+    searchSourceBuilder.sort(FieldSortBuilder(SEMVER_PATCH + KEYWORD).order(SortOrder.DESC))
+    val searchRequest = SearchRequest().indices(index).types(type)
+        .source(searchSourceBuilder)
+    val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
+
+    if (response.hits.totalHits > 1) {
+      log.info("Multiple Hits!!!!")
+      response.hits.forEach {
+        log.info(it.toString())
+      }
+    }
+
+    return response.hits.map { Json(strictMode = false).parse(Package.serializer(), it.sourceAsString) }.firstOrNull()
+  }
+
+  fun getNewest(publisher: String, name: String, major: String, username: String?): Package? {
+    val searchSourceBuilder = SearchSourceBuilder()
+    val boolQueryBuilder = BoolQueryBuilder()
+    boolQueryBuilder.must(MatchQueryBuilder(FIELD_PUBLISHER + KEYWORD, publisher))
+    boolQueryBuilder.must(MatchQueryBuilder(FIELD_NAME + KEYWORD, name))
+    boolQueryBuilder.must(MatchQueryBuilder(SEMVER_MAJOR + KEYWORD, major))
+    boolQueryBuilder.must(buildAccessQuery(username))
+    searchSourceBuilder.query(boolQueryBuilder).size(1)
+    searchSourceBuilder.sort(FieldSortBuilder(SEMVER_MINOR + KEYWORD).order(SortOrder.DESC))
+    searchSourceBuilder.sort(FieldSortBuilder(SEMVER_PATCH + KEYWORD).order(SortOrder.DESC))
+    val searchRequest = SearchRequest().indices(index).types(type)
+        .source(searchSourceBuilder)
+    val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
+
+    if (response.hits.totalHits > 1) {
+      log.info("Multiple Hits!!!!")
+      response.hits.forEach {
+        log.info(it.toString())
+      }
+    }
+
+    return response.hits.map { Json(strictMode = false).parse(Package.serializer(), it.sourceAsString) }.firstOrNull()
+  }
+
+  fun getNewest(publisher: String, name: String, major: String, minor: String, username: String?): Package? {
+    val searchSourceBuilder = SearchSourceBuilder()
+    val boolQueryBuilder = BoolQueryBuilder()
+    boolQueryBuilder.must(MatchQueryBuilder(FIELD_PUBLISHER + KEYWORD, publisher))
+    boolQueryBuilder.must(MatchQueryBuilder(FIELD_NAME + KEYWORD, name))
+    boolQueryBuilder.must(MatchQueryBuilder(SEMVER_MAJOR + KEYWORD, major))
+    boolQueryBuilder.must(MatchQueryBuilder(SEMVER_MINOR + KEYWORD, minor))
+    boolQueryBuilder.must(buildAccessQuery(username))
+    searchSourceBuilder.query(boolQueryBuilder).size(1)
+    searchSourceBuilder.sort(FieldSortBuilder(SEMVER_PATCH + KEYWORD).order(SortOrder.DESC))
+    val searchRequest = SearchRequest().indices(index).types(type)
+        .source(searchSourceBuilder)
+    val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
+
+    if (response.hits.totalHits > 1) {
+      log.info("Multiple Hits!!!!")
+      response.hits.forEach {
+        log.info(it.toString())
+      }
+    }
+
+    return response.hits.map { Json(strictMode = false).parse(Package.serializer(), it.sourceAsString) }.firstOrNull()
+  }
+
+  fun findByPublisherAndNameAndVersionAuth(publisher: String, name: String, version: String, username: String?): Package? {
     val searchSourceBuilder = SearchSourceBuilder()
     val boolQueryBuilder = BoolQueryBuilder()
     boolQueryBuilder.must(MatchQueryBuilder(FIELD_PUBLISHER + KEYWORD, publisher))
@@ -71,7 +141,7 @@ class CustomPackageRepository(
       }
     }
 
-    return response.hits.map { Json.parse(Package.serializer(), it.sourceAsString) }.firstOrNull()
+    return response.hits.map { Json(strictMode = false).parse(Package.serializer(), it.sourceAsString) }.firstOrNull()
   }
 
   fun findAll(pageable: Pageable, username: String?): Page<Package> {
@@ -83,11 +153,10 @@ class CustomPackageRepository(
       searchSourceBuilder.sort(FieldSortBuilder(it.property)
           .order(SortOrder.fromString(it.direction.name)))
     }
-
     val searchRequest = SearchRequest().indices(index).types(type).source(searchSourceBuilder)
     val response = elasticSearchRestTemplate.performSearchRequest(searchRequest)
     val content = response.hits.map {
-      Json.parse(Package.serializer(), it.sourceAsString)
+      Json(strictMode = false).parse(Package.serializer(), it.sourceAsString)
     }
 
     return PageImpl(content, pageable, response.hits.totalHits)
@@ -97,7 +166,7 @@ class CustomPackageRepository(
     val response = requestById(id)
 
     return if (response.isExists) {
-      Json.parse(Package.serializer(), response.sourceAsString)
+      Json(strictMode = false).parse(Package.serializer(), response.sourceAsString)
     } else {
       null
     }
@@ -117,7 +186,7 @@ class CustomPackageRepository(
     )
 
     return response.hits.map {
-      Json.parse(Package.serializer(), it.sourceAsString)
+      Json(strictMode = false).parse(Package.serializer(), it.sourceAsString)
     }
   }
 
@@ -140,13 +209,13 @@ class CustomPackageRepository(
             .source(searchSourceBuilder))
 
     val content = response.hits.map {
-      Json.parse(Package.serializer(), it.sourceAsString)
+      Json(strictMode = false).parse(Package.serializer(), it.sourceAsString)
     }
 
     return PageImpl(content, pageable, response.hits.totalHits)
   }
 
-  fun searchByPublisherAndName(pageable: Pageable, username: String?, publisher: String, name : String): Page<Package> {
+  fun searchByPublisherAndName(pageable: Pageable, username: String?, publisher: String, name: String): Page<Package> {
     val searchSourceBuilder = SearchSourceBuilder()
         .from(pageable.pageNumber)
         .size(pageable.pageSize)
@@ -164,9 +233,8 @@ class CustomPackageRepository(
             .indices(index)
             .types(type)
             .source(searchSourceBuilder))
-
     val content = response.hits.map {
-      Json.parse(Package.serializer(), it.sourceAsString)
+      Json(strictMode = false).parse(Package.serializer(), it.sourceAsString)
     }
 
     return PageImpl(content, pageable, response.hits.totalHits)
@@ -208,6 +276,10 @@ class CustomPackageRepository(
     private const val FIELD_VERSION = "version"
     private const val FIELD_ACCESS_LEVEL = "access_level"
     private const val FIELD_SIGNED_WITH = "signed_with"
+    private const val VERSION_PIPELINE = "version-pipeline"
+    private const val SEMVER_MAJOR = "major"
+    private const val SEMVER_MINOR = "minor"
+    private const val SEMVER_PATCH = "patch"
 
     private val log = LoggerFactory.getLogger(CustomPackageRepository::class.java)
   }
