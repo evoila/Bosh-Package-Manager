@@ -8,16 +8,18 @@ import org.elasticsearch.index.query.BoolQueryBuilder
 import org.elasticsearch.index.query.MatchQueryBuilder
 import org.elasticsearch.search.builder.SearchSourceBuilder
 import org.springframework.stereotype.Repository
-import java.util.*
 
 @Repository
 class CustomUserRepository(
     elasticSearchRestTemplate: ElasticSearchRestTemplate
 ) : AbstractElasticSearchRepository<User>(elasticSearchRestTemplate) {
 
-
   override fun serializeObject(entity: User): String {
     return Json.stringify(User.serializer(), entity)
+  }
+
+  fun save(entity: User): User {
+    return super.save(entity, null)
   }
 
   override val index: String = "users"

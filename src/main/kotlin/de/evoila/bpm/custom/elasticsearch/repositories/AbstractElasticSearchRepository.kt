@@ -23,12 +23,16 @@ abstract class AbstractElasticSearchRepository<T : BaseEntity>(
 
   abstract fun findById(id: String): T?
 
-  fun save(entity: T): T {
+  fun save(entity: T, piplineId: String?): T {
 
     val indexRequest = IndexRequest()
         .type(type)
         .index(index)
         .id(entity.id)
+
+    piplineId?.let {
+      indexRequest.pipeline = it
+    }
 
     val body = serializeObject(entity)
 
@@ -42,9 +46,9 @@ abstract class AbstractElasticSearchRepository<T : BaseEntity>(
     return entity
   }
 
-  fun saveAll(entities: Iterable<T>): List<T> {
+  fun saveAll(entities: Iterable<T>, piplineId: String?): List<T> {
     return entities.map {
-      save(it)
+      save(it, piplineId)
       return@map it
     }
   }

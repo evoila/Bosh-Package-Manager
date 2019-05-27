@@ -24,12 +24,11 @@ class PackageService(
   fun getAllPackages(username: String?, pageable: Pageable): Page<Package> =
       packageRepository.findAll(pageable, username)
 
-  fun getPackagesByPublisher(username: String?, pageable: Pageable, vendor: String): Page<Package> =
-      packageRepository.searchByPublisher(pageable, username, vendor)
+  fun getPackagesByPublisher(username: String?, pageable: Pageable, publisher: String): Page<Package> =
+      packageRepository.searchByPublisher(pageable, username, publisher)
 
-  fun getPackagesByPublisherAndName(username: String?, pageable: Pageable, vendor: String, name: String): Page<Package> =
-      packageRepository.searchByPublisherAndName(pageable, username, vendor, name)
-
+  fun getPackagesByPublisherAndName(username: String?, pageable: Pageable, publisher: String, name: String): Page<Package> =
+      packageRepository.searchByPublisherAndName(pageable, username, publisher, name)
 
   fun getPackagesByName(username: String?, packageName: String): List<Package> =
       packageRepository.searchPackagesByName(packageName, username)
@@ -37,10 +36,19 @@ class PackageService(
   fun findById(id: String): Package? = packageRepository.findById(id)
 
   @Throws(PackageNotFoundException::class)
-  fun accessPackage(vendor: String, name: String, version: String, username: String?): Package {
+  fun accessPackage(publisher: String, name: String, version: String, username: String?): Package {
+    val spittedVersion = version.split(".", "-")
 
-    return packageRepository.findByPublisherAndNameAndVersion(vendor, name, version, username)
-        ?: throw PackageNotFoundException("didn't not find a package with publisher : $vendor , name : $name:$version")
+    return when {
+      spittedVersion[0] == "*" -> packageRepository.getNewest(publisher, name, username)
+          ?: throw PackageNotFoundException(publisher, name, version)
+      spittedVersion.size > 1 && spittedVersion[1] == "*" -> packageRepository.getNewest(publisher, name, spittedVersion[0], username)
+          ?: throw PackageNotFoundException(publisher, name, version)
+      spittedVersion.size > 2 && spittedVersion[2] == "*" -> packageRepository.getNewest(publisher, name, spittedVersion[0], spittedVersion[1], username)
+          ?: throw PackageNotFoundException(publisher, name, version)
+      else -> packageRepository.findByPublisherAndNameAndVersionAuth(publisher, name, version, username)
+          ?: throw PackageNotFoundException(publisher, name, version)
+    }
   }
 
   fun checkIfPresent(packageBody: PackageBody): Package? {
@@ -99,8 +107,8 @@ class PackageService(
     }
   }
 
-  fun deletePackageIfAllowed(vendor: String, name: String, version: String) {
-    val pack = packageRepository.findByPublisherAndNameAndVersion(vendor, name, version)
+  fun deletePackageIfAllowed(publisher: String, name: String, version: String) {
+    val pack = packageRepository.findByPublisherAndNameAndVersion(publisher, name, version)
     pack?.let {
       packageRepository.deleteById(it.id)
       amazonS3Service.deleteObject(it.s3location)
@@ -111,7 +119,6 @@ class PackageService(
     val packageToSave = pendingPackages.remove(key)
         ?: throw PackageNotFoundException("The Package does not exist.")
     packageToSave.size = size
-
     packageRepository.save(packageToSave)
     log.info("Save package: $packageToSave")
   }

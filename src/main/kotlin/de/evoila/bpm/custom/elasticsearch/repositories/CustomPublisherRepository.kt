@@ -32,6 +32,10 @@ class CustomPublisherRepository(
     }
   }
 
+  fun save(entity: Publisher): Publisher {
+    return super.save(entity, null)
+  }
+
   fun findByName(name: String): Publisher? {
     val searchSourceBuilder = SearchSourceBuilder()
     val boolQueryBuilder = BoolQueryBuilder()
